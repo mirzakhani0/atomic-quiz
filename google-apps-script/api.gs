@@ -2,19 +2,14 @@
  * ATOMIC QUIZ - API REST para Google Apps Script
  */
 
-// ============================================
-// CONFIGURACIÓN - TU ID DE HOJA DE CÁLCULO
-// ============================================
 const SPREADSHEET_ID = '1x3WJAs5rzN4jrIF_PHtxp18JjxynHdLShCF9EbWBD4Q';
 
-// Nombres de las hojas de configuración
 const CONFIG_SHEETS = {
   'Ingenierías': 'Configuración_Ingenierías',
   'Sociales': 'Configuración_Sociales',
   'Biomédicas': 'Configuración_Biomédicas'
 };
 
-// Mapeo de asignaturas a hojas de banco de preguntas (Bancos Históricos)
 const SUBJECT_SHEETS = {
   'Aritmética': 'Banco_Aritmética',
   'Álgebra': 'Banco_Álgebra',
@@ -36,9 +31,6 @@ const SUBJECT_SHEETS = {
   'Quechua y aimara': 'Banco_Quechua y aimara'
 };
 
-// ============================================
-// CEPREUNA - Mapeo de hojas por curso
-// ============================================
 const CEPRE_SUBJECT_SHEETS = {
   'Aritmética': 'CEPRE_Aritmética',
   'Álgebra': 'CEPRE_Álgebra',
@@ -67,9 +59,6 @@ const CEPRE_SUBJECT_SHEETS = {
   'Historia y Geografía': 'CEPRE_HistoriaGeografia'
 };
 
-// ============================================
-// FUNCIÓN PRINCIPAL - ENDPOINT REST
-// ============================================
 function doGet(e) {
   try {
     const action = e.parameter.action;
@@ -85,108 +74,153 @@ function doGet(e) {
         result = getQuestions(area);
         break;
       case 'login':
-        const loginUsername = e.parameter.username || '';
-        const loginPassword = e.parameter.password || '';
-        result = loginUser(loginUsername, loginPassword);
+        result = loginUser(e.parameter.username, e.parameter.password);
         break;
       case 'registrarAlumnoConUsuario':
-        const regData = {
-          nombre: e.parameter.nombre || '',
-          apellido: e.parameter.apellido || '',
-          carrera: e.parameter.carrera || '',
-          area: e.parameter.area || '',
-          celular: e.parameter.celular || '',
-          dni: e.parameter.dni || '',
-          email: e.parameter.email || '',
-          username: e.parameter.username || '',
-          password: e.parameter.password || ''
-        };
-        result = registrarAlumnoConUsuario(regData);
+        result = registrarAlumnoConUsuario(e.parameter);
         break;
       case 'saveScore':
-        const scoreDni = e.parameter.dni || '';
-        const score = parseFloat(e.parameter.score) || 0;
-        const maxScore = parseFloat(e.parameter.maxScore) || 0;
-        const scoreArea = e.parameter.area || '';
-        const correctCount = parseInt(e.parameter.correct) || 0;
-        const totalCount = parseInt(e.parameter.total) || 0;
-        result = saveUserScore(scoreDni, score, maxScore, scoreArea, correctCount, totalCount);
+        result = saveUserScore(e.parameter.dni, e.parameter.score, e.parameter.maxScore, e.parameter.area, e.parameter.correct, e.parameter.total, e.parameter.wrongIds);
         break;
       case 'getHistory':
-        const historyDni = e.parameter.dni || '';
-        result = getUserHistory(historyDni);
+        result = getUserHistory(e.parameter.dni);
+        break;
+      case 'getLeaderboard':
+        result = getLeaderboard(e.parameter.area);
+        break;
+      case 'getWrongQuestions':
+        result = getWrongQuestions(e.parameter.dni);
         break;
       case 'test':
-        result = { status: 'ok', message: 'API ATOMIC QUIZ funcionando correctamente', timestamp: new Date().toISOString() };
+        result = { status: 'ok', message: 'API ATOMIC QUIZ funcionando' };
         break;
       default:
         return createErrorResponse('Acción no válida.');
     }
-
     return createSuccessResponse(result);
-
   } catch (error) {
     return createErrorResponse(error.toString());
   }
 }
 
 function createSuccessResponse(data) {
-  return ContentService
-    .createTextOutput(JSON.stringify({ success: true, ...data }))
-    .setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify({ success: true, ...data })).setMimeType(ContentService.MimeType.JSON);
 }
 
 function createErrorResponse(message) {
-  return ContentService
-    .createTextOutput(JSON.stringify({ success: false, error: message }))
-    .setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify({ success: false, error: message })).setMimeType(ContentService.MimeType.JSON);
 }
 
 // ============================================
-// LOGIN Y REGISTRO AVANZADO
+// LOGIN Y REGISTRO
 // ============================================
 
 function loginUser(username, password) {
-  try {
-    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    let sheet = ss.getSheetByName('Usuarios');
-    if (!sheet) return { success: false, message: 'Sistema de usuarios no configurado' };
-    const data = sheet.getDataRange().getValues();
-    const userLower = String(username).toLowerCase().trim();
-    for (let i = 1; i < data.length; i++) {
-      if (String(data[i][0]).toLowerCase().trim() === userLower && String(data[i][1]) === password) {
-        return { success: true, user: { username: data[i][0], role: data[i][2] || 'alumno', nombre: data[i][3] || '' } };
-      }
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  let sheet = ss.getSheetByName('Usuarios');
+  if (!sheet) return { success: false, message: 'No hay usuarios' };
+  const data = sheet.getDataRange().getValues();
+  const userLower = String(username).toLowerCase().trim();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]).toLowerCase().trim() === userLower && String(data[i][1]) === password) {
+      return { success: true, user: { username: data[i][0], role: data[i][2], nombre: data[i][3] } };
     }
-    return { success: false, message: 'Usuario o contraseña incorrectos' };
-  } catch (e) { return { success: false, message: e.toString() }; }
+  }
+  return { success: false, message: 'Usuario o contraseña incorrectos' };
 }
 
-function registrarAlumnoConUsuario(data) {
-  try {
-    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    let sheetAlumnos = ss.getSheetByName('Alumnos') || ss.insertSheet('Alumnos');
-    if (sheetAlumnos.getLastRow() === 0) sheetAlumnos.appendRow(['nombre', 'apellido', 'carrera', 'area', 'celular', 'dni', 'email', 'username', 'password', 'fecha']);
-    
-    let sheetUsuarios = ss.getSheetByName('Usuarios') || ss.insertSheet('Usuarios');
-    if (sheetUsuarios.getLastRow() === 0) sheetUsuarios.appendRow(['username', 'password', 'role', 'nombre', 'createdAt', 'active']);
-    
-    const userData = sheetUsuarios.getDataRange().getValues();
-    const userLower = String(data.username).toLowerCase().trim();
-    for (let i = 1; i < userData.length; i++) {
-      if (String(userData[i][0]).toLowerCase().trim() === userLower) return { success: false, message: 'El nombre de usuario ya existe' };
-    }
-    
-    sheetAlumnos.appendRow([data.nombre, data.apellido, data.carrera, data.area, data.celular, data.dni, data.email, data.username, data.password, new Date()]);
-    sheetUsuarios.appendRow([data.username, data.password, 'alumno', data.nombre + ' ' + data.apellido, new Date(), true]);
-    
-    return { success: true, message: 'Registro completado con éxito en ATOMIC QUIZ' };
-  } catch (e) { return { success: false, message: e.toString() }; }
+function registrarAlumnoConUsuario(p) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  let shA = ss.getSheetByName('Alumnos') || ss.insertSheet('Alumnos');
+  if (shA.getLastRow() === 0) shA.appendRow(['nombre', 'apellido', 'carrera', 'area', 'celular', 'dni', 'email', 'username', 'password', 'fecha']);
+  let shU = ss.getSheetByName('Usuarios') || ss.insertSheet('Usuarios');
+  if (shU.getLastRow() === 0) shU.appendRow(['username', 'password', 'role', 'nombre', 'createdAt', 'active']);
+  
+  const userData = shU.getDataRange().getValues();
+  for (let i = 1; i < userData.length; i++) {
+    if (String(userData[i][0]).toLowerCase().trim() === String(p.username).toLowerCase().trim()) return { success: false, message: 'Usuario ya existe' };
+  }
+  
+  shA.appendRow([p.nombre, p.apellido, p.carrera, p.area, p.celular, p.dni, p.email, p.username, p.password, new Date()]);
+  shU.appendRow([p.username, p.password, 'alumno', p.nombre + ' ' + p.apellido, new Date(), true]);
+  return { success: true };
 }
 
 // ============================================
-// FUNCIONES DE PREGUNTAS (Configuración y Carga)
+// HISTORIAL, RANKING Y ERRORES
 // ============================================
+
+function saveUserScore(dni, score, maxScore, area, correct, total, wrongIds) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  let shH = ss.getSheetByName('historial_puntajes') || ss.insertSheet('historial_puntajes');
+  if (shH.getLastRow() === 0) shH.appendRow(['DNI', 'Fecha', 'Área', 'Puntaje', 'Puntaje Máx', 'Correctas', 'Total', 'Nombre']);
+  
+  // Buscar nombre
+  let nombre = '';
+  let shU = ss.getSheetByName('Usuarios');
+  if (shU) {
+    let uData = shU.getDataRange().getValues();
+    for (let i = 1; i < uData.length; i++) if (String(uData[i][0]) === dni) { nombre = uData[i][3]; break; }
+  }
+
+  shH.appendRow([dni, new Date(), area, score, maxScore, correct, total, nombre]);
+
+  // Guardar errores si existen
+  if (wrongIds) {
+    let shE = ss.getSheetByName('errores_alumnos') || ss.insertSheet('errores_alumnos');
+    if (shE.getLastRow() === 0) shE.appendRow(['DNI', 'QuestionID', 'Fecha']);
+    let ids = wrongIds.split(',');
+    ids.forEach(id => shE.appendRow([dni, id, new Date()]));
+  }
+  return { saved: true };
+}
+
+function getLeaderboard(area) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  let sheet = ss.getSheetByName('historial_puntajes');
+  if (!sheet) return { leaderboard: [] };
+  const data = sheet.getDataRange().getValues();
+  let results = [];
+  for (let i = 1; i < data.length; i++) {
+    if (!area || data[i][2] === area) {
+      results.push({ nombre: data[i][7] || 'Anónimo', puntaje: parseFloat(data[i][3]), area: data[i][2], fecha: data[i][1] });
+    }
+  }
+  // Ordenar por puntaje y tomar top 10
+  results.sort((a, b) => b.puntaje - a.puntaje);
+  return { leaderboard: results.slice(0, 10) };
+}
+
+function getWrongQuestions(dni) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  let shE = ss.getSheetByName('errores_alumnos');
+  if (!shE) return { questions: [] };
+  const eData = shE.getDataRange().getValues();
+  let wrongIds = new Set();
+  for (let i = 1; i < eData.length; i++) {
+    if (String(eData[i][0]) === dni) wrongIds.add(String(eData[i][1]));
+  }
+  
+  // Aquí la lógica para buscar las preguntas reales por ID sería compleja, 
+  // así que por ahora retornaremos los IDs para que el frontend los maneje o 
+  // implementaremos una búsqueda simplificada.
+  return { wrongIds: Array.from(wrongIds) };
+}
+
+function getUserHistory(dni) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  let sheet = ss.getSheetByName('historial_puntajes');
+  if (!sheet) return { history: [] };
+  const data = sheet.getDataRange().getValues();
+  const hist = [];
+  for (let i = 1; i < data.length; i++) if (String(data[i][0]) === dni) hist.push({ fecha: data[i][1], area: data[i][2], puntaje: data[i][3], puntajeMax: data[i][4], correctas: data[i][5], total: data[i][6] });
+  return { history: hist.reverse() };
+}
+
+// ============================================
+// FUNCIONES DE PREGUNTAS
+// ============================================
+
 function getConfig() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const config = {};
@@ -195,9 +229,7 @@ function getConfig() {
     if (!sheet) continue;
     const data = sheet.getDataRange().getValues();
     const subjects = [];
-    for (let i = 1; i < data.length; i++) {
-      if (data[i][1] && data[i][1] !== 'TOTAL') subjects.push({ name: data[i][1], questionCount: data[i][3], maxScore: data[i][5] });
-    }
+    for (let i = 1; i < data.length; i++) if (data[i][1] && data[i][1] !== 'TOTAL') subjects.push({ name: data[i][1], questionCount: data[i][3], maxScore: data[i][5] });
     config[areaName] = { name: areaName, subjects: subjects };
   }
   return config;
@@ -223,7 +255,8 @@ function getRandomQuestionsFromSubject(ss, subName, count, maxScore, startNum) {
   const data = sheet.getDataRange().getValues();
   const all = [];
   for (let i = 1; i < data.length; i++) if (data[i][0]) all.push({ r: i, d: data[i] });
-  const sel = selectRandomItems(all, count);
+  const shuff = all.sort(() => 0.5 - Math.random());
+  const sel = shuff.slice(0, count);
   const pts = count > 0 ? maxScore / count : 0;
   return sel.map((q, idx) => ({
     id: `${subName}-${q.r}`, number: startNum + idx, questionText: q.d[0],
@@ -231,27 +264,4 @@ function getRandomQuestionsFromSubject(ss, subName, count, maxScore, startNum) {
     correctAnswer: (parseInt(q.d[7]) || 1) - 1, subject: subName, points: pts,
     justification: q.d[14] || null, imageLink: q.d[9] || null
   }));
-}
-
-function selectRandomItems(arr, count) {
-  const shuff = [...arr].sort(() => 0.5 - Math.random());
-  return shuff.slice(0, count);
-}
-
-function saveUserScore(dni, score, maxScore, area, correct, total) {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  let sheet = ss.getSheetByName('historial_puntajes') || ss.insertSheet('historial_puntajes');
-  if (sheet.getLastRow() === 0) sheet.appendRow(['DNI', 'Fecha', 'Área', 'Puntaje', 'Puntaje Máx', 'Correctas', 'Total']);
-  sheet.appendRow([dni, new Date(), area, score, maxScore, correct, total]);
-  return { saved: true };
-}
-
-function getUserHistory(dni) {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName('historial_puntajes');
-  if (!sheet) return { history: [] };
-  const data = sheet.getDataRange().getValues();
-  const hist = [];
-  for (let i = 1; i < data.length; i++) if (String(data[i][0]) === dni) hist.push({ fecha: data[i][1], area: data[i][2], puntaje: data[i][3], puntajeMax: data[i][4], correctas: data[i][5], total: data[i][6] });
-  return { history: hist.reverse() };
 }
