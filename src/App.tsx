@@ -1,25 +1,14 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Landing } from './components/Landing';
-import { StudentForm } from './components/StudentForm';
-import { ExamConfirmation } from './components/ExamConfirmation';
-import { Quiz } from './components/Quiz';
-import { Results } from './components/Results';
-import { Banqueo } from './components/Banqueo';
-import { BanqueoCepreuna } from './components/BanqueoCepreuna';
-import { SimulacroCepreuna } from './components/SimulacroCepreuna';
+import { Landing, QuizizzMode, SimulacroMode, Admin } from './components';
 
 function App() {
   return (
-    <BrowserRouter basename="/kchimbo-plus">
+    <BrowserRouter>
       <Routes>
         <Route path="/" element={<Landing />} />
-        <Route path="/registro" element={<StudentForm />} />
-        <Route path="/confirmar" element={<ExamConfirmation />} />
-        <Route path="/examen" element={<Quiz />} />
-        <Route path="/resultados" element={<Results />} />
-        <Route path="/banqueo" element={<Banqueo />} />
-        <Route path="/banqueo-cepreuna" element={<BanqueoCepreuna />} />
-        <Route path="/simulacro-cepreuna" element={<SimulacroCepreuna />} />
+        <Route path="/quizizz" element={<QuizizzMode />} />
+        <Route path="/simulacro" element={<SimulacroMode />} />
+        <Route path="/admin" element={<Admin />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

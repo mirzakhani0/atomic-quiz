@@ -1,232 +1,210 @@
 // ============================================
-// TIPOS PRINCIPALES DEL SISTEMA
+// TIPOS PRINCIPALES - ATOMIC QUIZ
 // ============================================
 
-// Áreas de estudio disponibles
 export type AreaType = 'Ingenierías' | 'Sociales' | 'Biomédicas';
 
-// Tipos de proceso de admisión
-export type ProcessType = 'CEPREUNA' | 'GENERAL' | 'EXTRAORDINARIO';
+export type ExamMode = 'quizizz' | 'simulacro';
 
-// Estados del examen
 export type ExamStatus = 'idle' | 'loading' | 'ready' | 'in_progress' | 'completed' | 'error';
+
+// ============================================
+// CURSOS POR ÁREA
+// ============================================
+
+export const COURSES_BY_AREA: Record<AreaType, string[]> = {
+  'Ingenierías': [
+    'Aritmética', 'Álgebra', 'Geometría', 'Trigonometría',
+    'Física', 'Química', 'Biología',
+    'Psicología', 'Historia', 'Geografía',
+    'Educación Cívica', 'Economía', 'Comunicación', 'Literatura',
+    'Razonamiento Matemático', 'Razonamiento Verbal',
+    'Inglés', 'Quechua'
+  ],
+  'Sociales': [
+    'Matemática', 'Física', 'Química', 'Biología',
+    'Psicología', 'Historia', 'Geografía',
+    'Educación Cívica', 'Economía', 'Comunicación', 'Literatura',
+    'Razonamiento Matemático', 'Razonamiento Verbal',
+    'Inglés', 'Quechua'
+  ],
+  'Biomédicas': [
+    'Matemática', 'Física', 'Química', 'Biología', 'Anatomía',
+    'Psicología', 'Historia', 'Geografía',
+    'Educación Cívica', 'Economía', 'Comunicación',
+    'Razonamiento Matemático', 'Razonamiento Verbal',
+    'Inglés', 'Quechua'
+  ]
+};
 
 // ============================================
 // DATOS DEL ESTUDIANTE
 // ============================================
+
 export interface Student {
-  dni: string;
-  fullName: string;
-  area: AreaType;
-  processType?: ProcessType; // Tipo de proceso (CEPREUNA usa hojas CEPRE_)
-}
-
-// ============================================
-// CONFIGURACIÓN DE ASIGNATURAS
-// ============================================
-export interface Subject {
-  code: string | number;
+  id: string;
   name: string;
-  pointsPerQuestion: number;
-  questionCount: number;
-  weight: number;
-  maxScore: number;
-}
-
-export interface AreaConfig {
-  name: AreaType;
-  subjects: Subject[];
-  totalQuestions: number;
-  totalMaxScore: number;
-}
-
-export interface Config {
-  [key: string]: AreaConfig;
+  area: AreaType;
 }
 
 // ============================================
-// PREGUNTAS Y OPCIONES
+// PREGUNTAS
 // ============================================
-export interface QuestionMetadata {
-  numero?: string | number;
-  tema?: string;
-  subtema?: string;
-}
 
 export interface Question {
   id: string;
-  number: number; // Número de pregunta global (1-60)
+  number: number;
   questionText: string;
-  questionType: string;
   options: string[];
-  correctAnswer: number; // Índice 0-based de la respuesta correcta
-  timeSeconds: number;
-  imageLink: string | null;
-  subject: string;
-  points: number;
-  sourceFile?: string | null; // Nombre del archivo de donde se extrajo la pregunta
-  justification?: string | null; // Justificación/explicación de la respuesta correcta
-  metadata?: QuestionMetadata;
+  correctAnswer: number;
+  course: string;
+  area: AreaType;
+  justification?: string;
+  imageUrl?: string;
 }
 
 // ============================================
-// RESPUESTAS DEL ESTUDIANTE
+// RESPUESTAS
 // ============================================
+
 export interface Answer {
   questionId: string;
-  selectedOption: number | null; // null si no respondió
-  isCorrect: boolean;
-  timeSpent: number; // Segundos que tardó en responder
-}
-
-// ============================================
-// RESULTADOS DEL EXAMEN
-// ============================================
-export interface SubjectResult {
-  name: string;
-  correctAnswers: number;
-  totalQuestions: number;
-  percentage: number;
-  pointsObtained: number;
-  maxPoints: number;
-}
-
-export interface ExamResult {
-  student: Student;
-  date: Date;
-  totalScore: number;
-  maxScore: number;
-  percentage: number;
-  subjectResults: SubjectResult[];
-  answers: Answer[];
-  totalTime: number; // Tiempo total en segundos
-  performanceLevel: PerformanceLevel;
-}
-
-export type PerformanceLevel = 'excellent' | 'good' | 'regular' | 'needs_practice';
-
-// ============================================
-// ESTADO DEL STORE (ZUSTAND)
-// ============================================
-// Respuesta guardada durante el examen (sin evaluación)
-export interface SavedAnswer {
-  questionId: string;
   selectedOption: number | null;
+  isCorrect: boolean;
+  timeSpent: number;
 }
 
-export interface ExamStore {
-  // Estado
-  status: ExamStatus;
+// ============================================
+// RESULTADOS
+// ============================================
+
+export interface QuizizzResult {
+  totalQuestions: number;
+  correctAnswers: number;
+  incorrectAnswers: number;
+  unanswered: number;
+  percentage: number;
+  answers: Answer[];
+  wrongQuestions: Question[];
+  timeSpent: number;
+}
+
+export interface SimulacroResult {
+  totalQuestions: number;
+  correctAnswers: number;
+  incorrectAnswers: number;
+  unanswered: number;
+  percentage: number;
+  score: number;
+  maxScore: number;
+  answers: Answer[];
+  answersByCourse: Record<string, { correct: number; total: number }>;
+  timeSpent: number;
+}
+
+// ============================================
+// ESTADO DEL STORE
+// ============================================
+
+export interface AppStore {
   student: Student | null;
-  config: Config | null;
+  setStudent: (student: Student) => void;
+  
+  selectedArea: AreaType | null;
+  setSelectedArea: (area: AreaType | null) => void;
+  
+  selectedCourse: string | null;
+  setSelectedCourse: (course: string | null) => void;
+  
   questions: Question[];
   currentQuestionIndex: number;
-  answers: Answer[];
-  savedAnswers: Map<string, number | null>; // Respuestas guardadas durante el examen
-  result: ExamResult | null;
-  error: string | null;
+  setQuestions: (questions: Question[]) => void;
+  setCurrentQuestionIndex: (index: number) => void;
+  
+  savedAnswers: Map<string, number | null>;
+  saveAnswer: (questionId: string, option: number | null) => void;
+  clearAnswers: () => void;
+  
+  examMode: ExamMode | null;
+  setExamMode: (mode: ExamMode | null) => void;
+  
+  status: ExamStatus;
+  setStatus: (status: ExamStatus) => void;
+  
+  quizizzResult: QuizizzResult | null;
+  simulacroResult: SimulacroResult | null;
+  setQuizizzResult: (result: QuizizzResult | null) => void;
+  setSimulacroResult: (result: SimulacroResult | null) => void;
+  
   startTime: Date | null;
-
-  // Acciones
-  setStudent: (student: Student) => void;
-  loadConfig: () => Promise<void>;
-  loadQuestions: (area: AreaType) => Promise<void>;
-  startExam: () => void;
-  saveAnswer: (questionId: string, selectedOption: number | null) => void; // Guardar sin evaluar
-  answerQuestion: (questionId: string, selectedOption: number | null, timeSpent: number) => void;
-  nextQuestion: () => void;
-  previousQuestion: () => void;
-  goToQuestion: (index: number) => void;
-  finishExam: () => void;
-  resetExam: () => void;
-  setError: (error: string) => void;
+  setStartTime: (time: Date | null) => void;
+  
+  reset: () => void;
 }
 
 // ============================================
-// RESPUESTAS DE LA API
+// ADMIN - IMPORTACIÓN
 // ============================================
-export interface ApiResponse<T> {
+
+export interface ImportConfig {
+  area: AreaType;
+  course: string;
+  source: 'google-sheets' | 'csv' | 'manual';
+  url?: string;
+  data?: Question[];
+}
+
+export interface QuestionImport {
+  questionText: string;
+  options: string[];
+  correctAnswer: number;
+  justification?: string;
+  course: string;
+  area: AreaType;
+}
+
+export interface ImportResult {
   success: boolean;
-  data?: T;
-  error?: string;
-}
-
-// ============================================
-// PROPS DE COMPONENTES
-// ============================================
-export interface QuestionProps {
-  question: Question;
-  questionNumber: number;
-  totalQuestions: number;
-  onAnswer: (selectedOption: number | null) => void;
-  timeRemaining: number;
-}
-
-export interface ProgressBarProps {
-  current: number;
-  total: number;
-  percentage?: number;
-}
-
-export interface TimerProps {
-  seconds: number;
-  isWarning?: boolean;
-  onTimeout?: () => void;
-}
-
-export interface ResultCardProps {
-  result: SubjectResult;
+  imported: number;
+  errors: string[];
+  course: string;
+  area: AreaType;
 }
 
 // ============================================
 // CONSTANTES
 // ============================================
-export const AREAS: AreaType[] = ['Ingenierías', 'Sociales', 'Biomédicas'];
 
-export const AREA_INFO: Record<AreaType, { description: string; icon: string; color: string }> = {
+export const AREA_INFO: Record<AreaType, { description: string; color: string; icon: string }> = {
   'Ingenierías': {
-    description: 'Arquitectura, Civil, Sistemas, Mecánica, Electrónica, Química, etc.',
-    icon: 'Calculator',
-    color: 'indigo'
+    description: 'Para carreras de Ingeniería y Tecnología',
+    color: 'indigo',
+    icon: 'Cpu'
   },
   'Sociales': {
-    description: 'Derecho, Educación, Administración, Contabilidad, Comunicación, etc.',
-    icon: 'Users',
-    color: 'emerald'
+    description: 'Para carreras de Ciencias Sociales y Humanidades',
+    color: 'emerald',
+    icon: 'Users'
   },
   'Biomédicas': {
-    description: 'Medicina, Enfermería, Odontología, Veterinaria, Biología, etc.',
-    icon: 'Heart',
-    color: 'rose'
+    description: 'Para carreras de Salud y Medicina',
+    color: 'rose',
+    icon: 'Heart'
   }
 };
 
-export const PERFORMANCE_THRESHOLDS = {
-  excellent: 2400, // > 80%
-  good: 1800,      // > 60%
-  regular: 1200,   // > 40%
-  // needs_practice: < 1200
+export const SIMULACRO_CONFIG = {
+  totalQuestions: 60,
+  timeMinutes: 180,
+  passingPercentage: 50
 };
 
-export const PERFORMANCE_MESSAGES: Record<PerformanceLevel, { title: string; message: string; color: string }> = {
-  excellent: {
-    title: '¡Excelente!',
-    message: 'Tu preparación es sobresaliente. Estás muy bien preparado para el examen de admisión.',
-    color: 'emerald'
-  },
-  good: {
-    title: '¡Buen trabajo!',
-    message: 'Tienes una buena base. Con un poco más de práctica alcanzarás la excelencia.',
-    color: 'blue'
-  },
-  regular: {
-    title: 'Regular',
-    message: 'Hay áreas que necesitan refuerzo. Enfócate en las asignaturas con menor puntaje.',
-    color: 'amber'
-  },
-  needs_practice: {
-    title: 'Necesitas practicar',
-    message: 'Es importante dedicar más tiempo al estudio. No te desanimes, cada práctica suma.',
-    color: 'red'
-  }
+export const QUIZIZZ_CONFIG = {
+  defaultQuestions: 10,
+  showFeedback: true,
+  showJustification: true,
+  shuffleQuestions: true,
+  shuffleOptions: true
 };
+
+export const AREAS: AreaType[] = ['Ingenierías', 'Sociales', 'Biomédicas'];
