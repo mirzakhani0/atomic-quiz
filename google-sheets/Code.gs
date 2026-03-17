@@ -288,7 +288,8 @@ function getUsuarios() {
     for (var i = 1; i < data.length; i++) {
       var obj = {};
       for (var j = 0; j < headers.length; j++) {
-        obj[headers[j]] = data[i][j];
+        var value = data[i][j];
+        obj[headers[j]] = value !== null && value !== undefined ? String(value) : '';
       }
       result.push(obj);
     }
@@ -378,10 +379,11 @@ function toggleUserActive(username, active) {
   try {
     var sheet = getSheet('Usuarios');
     var data = sheet.getDataRange().getValues();
-    var userLower = username.toLowerCase();
+    var userLower = String(username).toLowerCase();
     
     for (var i = 1; i < data.length; i++) {
-      if (data[i][0].toLowerCase() === userLower) {
+      var storedUsername = data[i][0];
+      if (storedUsername && String(storedUsername).toLowerCase() === userLower) {
         sheet.getRange(i + 1, 6).setValue(active);
         return { 
           success: true, 
