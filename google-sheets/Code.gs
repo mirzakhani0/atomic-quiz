@@ -242,7 +242,8 @@ function login(username, password) {
             user: {
               username: data[i][0],
               role: data[i][2] || 'alumno',
-              nombre: data[i][3] || ''
+              nombre: data[i][3] || '',
+              active: isActive
             }
           };
         } else {

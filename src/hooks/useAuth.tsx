@@ -59,22 +59,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (result.success && result.user) {
-        const userActive = result.user.active;
-        const isActive = userActive === true || userActive === 'TRUE' || userActive === 'true' || userActive === '1' || userActive === 1;
-        
-        if (!isActive) {
-          return { success: false, message: 'Tu cuenta está pendiente de aprobación. Un administrador debe activar tu acceso.' };
-        }
-        
         setCurrentUser(result.user);
         setIsAuthenticated(result.user.role === 'admin');
         localStorage.setItem('atomic_quiz_auth', 'true');
         localStorage.setItem('atomic_quiz_user', JSON.stringify(result.user));
         return { success: true };
-      }
-
-      if (result.message?.toLowerCase().includes('inactive') || result.message?.toLowerCase().includes('pendiente') || result.message?.toLowerCase().includes('activo')) {
-        return { success: false, message: 'Tu cuenta está pendiente de aprobación. Un administrador debe activar tu acceso.' };
       }
 
       return { success: false, message: result.message || 'Usuario o contraseña incorrectos' };
