@@ -13,10 +13,10 @@ interface QuestionForm {
   course: string;
 }
 
-const SHEET_URLS: Record<AreaType, string> = {
-  'Ingenierías': '16l6hcIh0eZH-mu5dBxN1a68zBvrnbuy-TJctLXsPCtY',
-  'Biomédicas': '1y7gxnEcm5r4MsxHXgJufT4OXKyoqr87NLE-8xgEaeD8',
-  'Sociales': '1pbVadT__c7iqs-N8UyLkUU1E0o2vgPUAqcLMHq6eYpA'
+const APPSCRIPT_URLS: Record<AreaType, string> = {
+  'Ingenierías': 'https://script.google.com/macros/s/AKfycbw-MZvuiU4Z9ySewOSDjyq81pR_NjrcTVq3szEZU1DWDjKyPFG6IvdS5nlzE1ACZz-mMw/exec',
+  'Biomédicas': 'https://script.google.com/macros/s/AKfycbxqr1z3gQNHR9TxPCYX_nHAVR1TMvI1veNdt5L1BpaXkULpdddI_K80LSCauzkkjz7--g/exec',
+  'Sociales': 'https://script.google.com/macros/s/AKfycbwP-r3D0vvWJ_2Zx_KDyt_sWNBA-Ixs9Yemjhq6XAso454THHVNYqkZpQIty8C2yKZpzg/exec'
 };
 
 const SEMANAS = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10', 'S11', 'S12', 'S13', 'S14', 'S15', 'S16'];
@@ -60,11 +60,34 @@ export function Admin() {
     return result;
   };
 
-  const fetchFromGoogleSheets = async (sheetId: string, semana: string): Promise<QuestionForm[]> => {
-    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${semana}`;
+  const fetchFromGoogleSheets = async (appsScriptUrl: string, semana: string): Promise<QuestionForm[]> => {
+    const url = `${appsScriptUrl}?sheet=${semana}`;
     const response = await fetch(url);
-    const text = await response.text();
-    return parseGoogleSheetCSV(text);
+    const json = await response.json();
+    
+    if (json.error) {
+      throw new Error(json.error);
+    }
+    
+    const data = json.data || [];
+    return data.map((row: Record<string, string>) => {
+      const respuesta = (row.respuesta || '').toString().toUpperCase().trim();
+      const respuestaIndex = respuesta.charCodeAt(0) - 65;
+      
+      return {
+        questionText: row.pregunta || '',
+        options: [
+          row.opcion_a || '',
+          row.opcion_b || '',
+          row.opcion_c || '',
+          row.opcion_d || '',
+          row.opcion_e || ''
+        ],
+        correctAnswer: respuestaIndex >= 0 && respuestaIndex < 5 ? respuestaIndex : 0,
+        justification: row.justificacion || '',
+        course: row.curso || ''
+      };
+    });
   };
 
   const handleImport = async () => {
@@ -73,8 +96,8 @@ export function Admin() {
     setImportResult(null);
 
     try {
-      const sheetId = SHEET_URLS[area];
-      const importedQuestions = await fetchFromGoogleSheets(sheetId, semana);
+      const appsScriptUrl = APPSCRIPT_URLS[area];
+      const importedQuestions = await fetchFromGoogleSheets(appsScriptUrl, semana);
       
       const filteredQuestions = course 
         ? importedQuestions.filter(q => q.course.toLowerCase() === course.toLowerCase())
@@ -90,7 +113,7 @@ export function Admin() {
     } catch (error) {
       setImportResult({
         success: false,
-        message: 'Error al importar. Verifica que el documento esté publicado.'
+        message: 'Error al importar. Verifica que el Apps Script esté desplegado correctamente.'
       });
     } finally {
       setImporting(false);
