@@ -417,7 +417,7 @@ export function QuizizzMode() {
             Anterior
           </button>
           <button
-            onClick={handleFinish}
+            onClick={isLastStep ? handleFinish : handleNext}
             className="flex-1 py-3 bg-violet-600 rounded-xl font-medium hover:bg-violet-500 flex items-center justify-center gap-2"
           >
             {isLastStep ? 'Ver resultados' : 'Siguiente'}
