@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (result.success && result.user) {
         const userActive = result.user.active;
-        const isActive = userActive === true || userActive === 'true' || userActive === '1' || userActive === 1;
+        const isActive = userActive === true || userActive === 'TRUE' || userActive === 'true' || userActive === '1' || userActive === 1;
         
         if (!isActive) {
           return { success: false, message: 'Tu cuenta está pendiente de aprobación. Un administrador debe activar tu acceso.' };
