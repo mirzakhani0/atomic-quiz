@@ -17,7 +17,7 @@ interface ImportedQuestion {
   curso?: string;
 }
 
-const APPSCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw0MpSBuWXFG1-zWBlHIed3uU4RizWVK24DZpREnxQJQ_bewaGPsF0iFlGht72BcwWm/exec';
+const APPSCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxNDLhK6_BaxCtOO_sXrvfare0f4If3JLruSswte2f4ujoeKSQUmxnoXjIJUBQoWA6c/exec';
 
 const APPSCRIPT_URLS: Record<AreaType, string> = {
   'Ingenierías': 'https://script.google.com/macros/s/AKfycbyNAnb4uLxcxFiwNZ3Hmi_VIbQlornTFY1SA73zC3uQ1Tu9lwMe2VJZS9HzLLYQojSJyg/exec',
