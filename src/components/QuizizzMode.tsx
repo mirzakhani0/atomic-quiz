@@ -348,7 +348,7 @@ export function QuizizzMode() {
             className="w-full py-3 mt-3 bg-violet-600 rounded-xl font-medium hover:bg-violet-500 flex items-center justify-center gap-2"
           >
             <RotateCcw className="w-4 h-4" />
-            Repetir Quizizz
+            Más Quizizz
           </button>
         </div>
       </div>

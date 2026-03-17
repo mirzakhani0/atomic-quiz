@@ -242,7 +242,7 @@ export function SimulacroMode() {
             className="w-full py-4 mt-3 bg-slate-700 rounded-xl font-bold hover:bg-slate-600 flex items-center justify-center gap-2"
           >
             <RotateCcw className="w-5 h-5" />
-            Repetir Simulacro
+            Más Simulacro
           </button>
         </div>
       </div>
