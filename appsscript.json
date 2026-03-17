@@ -1,0 +1,43 @@
+// Google Apps Script - API para ATOMIC QUIZ
+// Copia este código en cada documento de Google Sheets
+
+function doGet(e) {
+  const sheetName = e.parameter.sheet || 'S1';
+  const format = e.parameter.format || 'json';
+  
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  
+  if (!sheet) {
+    return ContentService.createTextOutput(
+      format === 'json' 
+        ? JSON.stringify({ error: 'Hoja no encontrada: ' + sheetName })
+        : 'Error: Hoja no encontrada'
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0].map(h => String(h).trim().toLowerCase());
+  const rows = data.slice(1);
+  
+  const result = rows
+    .filter(row => row[0] && String(row[0]).trim())
+    .map(row => {
+      const obj = {};
+      headers.forEach((header, i) => {
+        obj[header] = row[i];
+      });
+      return obj;
+    });
+  
+  if (format === 'text') {
+    return ContentService.createTextOutput(JSON.stringify(result, null, 2))
+      .setMimeType(ContentService.MimeType.TEXT);
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({ data: result }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  return doGet(e);
+}
