@@ -1,117 +1,16 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAppStore, useCurrentQuestion, useProgress, useIsLastQuestion, useIsFirstQuestion, useSavedAnswer } from '../hooks/useAppStore';
-import { AREAS, COURSES_BY_AREA, QUIZIZZ_CONFIG, AreaType } from '../types';
-import { ArrowLeft, ArrowRight, CheckCircle, XCircle, BookOpen, RotateCcw, Home, Lightbulb } from 'lucide-react';
+import { useQuestionsStore } from '../hooks/useQuestions';
+import { AREAS, COURSES_BY_AREA, AreaType } from '../types';
+import { ArrowLeft, ArrowRight, CheckCircle, XCircle, BookOpen, RotateCcw, Home, Lightbulb, AlertCircle } from 'lucide-react';
 import clsx from 'clsx';
-
-const MOCK_QUESTIONS = [
-  {
-    id: '1',
-    number: 1,
-    questionText: '¿Cuánto es 15 + 27?',
-    options: ['40', '42', '44', '46', '48'],
-    correctAnswer: 1,
-    course: 'Aritmética',
-    area: 'Ingenierías' as AreaType,
-    justification: '15 + 27 = 42. Se suman las unidades: 5+7=12, se lleva 1. Luego 1+2+1=4.'
-  },
-  {
-    id: '2',
-    number: 2,
-    questionText: '¿Cuál es el resultado de 8 × 7?',
-    options: ['54', '56', '58', '60', '62'],
-    correctAnswer: 1,
-    course: 'Aritmética',
-    area: 'Ingenierías' as AreaType,
-    justification: '8 × 7 = 56. La tabla de multiplicar del 8: 8×7=56.'
-  },
-  {
-    id: '3',
-    number: 3,
-    questionText: '¿Cuál es la capital del Perú?',
-    options: ['Arequipa', 'Cusco', 'Lima', 'Trujillo', 'Iquitos'],
-    correctAnswer: 2,
-    course: 'Geografía',
-    area: 'Ingenierías' as AreaType,
-    justification: 'Lima es la capital del Perú desde 1535, fundada por Francisco Pizarro.'
-  },
-  {
-    id: '4',
-    number: 4,
-    questionText: '¿Qué gas constituye aproximadamente el 21% de la atmósfera terrestre?',
-    options: ['Nitrógeno', 'Oxígeno', 'Argón', 'Dióxido de carbono', 'Hidrógeno'],
-    correctAnswer: 1,
-    course: 'Química',
-    area: 'Ingenierías' as AreaType,
-    justification: 'El oxígeno constituye aproximadamente el 21% del aire que respiramos.'
-  },
-  {
-    id: '5',
-    number: 5,
-    questionText: '¿En qué año terminó la Segunda Guerra Mundial?',
-    options: ['1943', '1944', '1945', '1946', '1947'],
-    correctAnswer: 2,
-    course: 'Historia',
-    area: 'Ingenierías' as AreaType,
-    justification: 'La Segunda Guerra Mundial terminó en 1945 con la rendición de Japón.'
-  },
-  {
-    id: '6',
-    number: 6,
-    questionText: '¿Cuál es el órgano más grande del cuerpo humano?',
-    options: ['Corazón', 'Hígado', 'Piel', 'Pulmón', 'Cerebro'],
-    correctAnswer: 2,
-    course: 'Biología',
-    area: 'Ingenierías' as AreaType,
-    justification: 'La piel es el órgano más grande, cubre aproximadamente 2 metros cuadrados.'
-  },
-  {
-    id: '7',
-    number: 7,
-    questionText: '¿Qué representa la fórmula química H2O?',
-    options: ['Agua', 'Oxígeno', 'Hidrógeno', 'Dióxido de carbono', 'Alcohol'],
-    correctAnswer: 0,
-    course: 'Química',
-    area: 'Ingenierías' as AreaType,
-    justification: 'H2O es la fórmula del agua, compuesta por 2 átomos de hidrógeno y 1 de oxígeno.'
-  },
-  {
-    id: '8',
-    number: 8,
-    questionText: '¿Cuál es el río más largo del mundo?',
-    options: ['Amazonas', 'Nilo', 'Misisipi', 'Yangtsé', 'Mekong'],
-    correctAnswer: 1,
-    course: 'Geografía',
-    area: 'Ingenierías' as AreaType,
-    justification: 'El río Nilo tiene aproximadamente 6,650 km, siendo el más largo del mundo.'
-  },
-  {
-    id: '9',
-    number: 9,
-    questionText: '¿Quién escribió "La Odisea"?',
-    options: ['Platón', 'Homero', 'Aristóteles', 'Sófocles', 'Eurípides'],
-    correctAnswer: 1,
-    course: 'Literatura',
-    area: 'Ingenierías' as AreaType,
-    justification: 'Homero fue el autor de "La Odisea", poema épico griego del siglo VIII a.C.'
-  },
-  {
-    id: '10',
-    number: 10,
-    questionText: '¿Cuál es la velocidad de la luz en el vacío?',
-    options: ['300,000 km/s', '150,000 km/s', '500,000 km/s', '200,000 km/s', '400,000 km/s'],
-    correctAnswer: 0,
-    course: 'Física',
-    area: 'Ingenierías' as AreaType,
-    justification: 'La velocidad de la luz en el vacío es aproximadamente 300,000 km/s.'
-  }
-];
 
 export function QuizizzMode() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const areaParam = searchParams.get('area');
+  const courseParam = searchParams.get('course');
   
   const { 
     selectedArea, setSelectedArea,
@@ -120,6 +19,8 @@ export function QuizizzMode() {
     saveAnswer, savedAnswers,
     setQuizizzResult, quizizzResult
   } = useAppStore();
+
+  const { getQuestionsByAreaAndCourse, getAllCourses } = useQuestionsStore();
 
   const currentQuestion = useCurrentQuestion();
   const progress = useProgress();
@@ -132,15 +33,31 @@ export function QuizizzMode() {
 
   const selectedAnswer = useSavedAnswer(currentQuestion?.id || '');
 
+  const availableCourses = selectedArea ? getAllCourses(selectedArea) : [];
+
   useEffect(() => {
     if (areaParam && AREAS.includes(areaParam as AreaType)) {
       setSelectedArea(areaParam as AreaType);
     }
   }, [areaParam, setSelectedArea]);
 
+  useEffect(() => {
+    if (courseParam && selectedArea) {
+      setSelectedCourse(courseParam);
+    }
+  }, [courseParam, selectedArea, setSelectedCourse]);
+
   const handleStartQuizizz = () => {
     if (!selectedArea || !selectedCourse) return;
-    const shuffled = [...MOCK_QUESTIONS].sort(() => Math.random() - 0.5);
+    
+    const questions = getQuestionsByAreaAndCourse(selectedArea, selectedCourse);
+    
+    if (questions.length === 0) {
+      alert('No hay preguntas disponibles para este curso. Primero importa preguntas desde el panel de admin.');
+      return;
+    }
+
+    const shuffled = [...questions].sort(() => Math.random() - 0.5);
     setQuestions(shuffled);
     setStep('quiz');
   };
@@ -169,7 +86,7 @@ export function QuizizzMode() {
   };
 
   const calculateResults = () => {
-    const questions = MOCK_QUESTIONS;
+    const questions = useAppStore.getState().questions;
     let correct = 0;
     const wrongQuestions: typeof questions = [];
     const answers: { questionId: string; selectedOption: number | null; isCorrect: boolean; timeSpent: number }[] = [];
@@ -299,10 +216,22 @@ export function QuizizzMode() {
                   className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl text-white"
                 >
                   <option value="">Seleccionar curso</option>
-                  {COURSES_BY_AREA[selectedArea].map(course => (
+                  {availableCourses.map(course => (
+                    <option key={course} value={course}>{course}</option>
+                  ))}
+                  {availableCourses.length === 0 && COURSES_BY_AREA[selectedArea].map(course => (
                     <option key={course} value={course}>{course}</option>
                   ))}
                 </select>
+              </div>
+            )}
+
+            {selectedArea && selectedCourse && (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-amber-400">
+                  Las preguntas se cargan desde las que has importado en el panel de admin.
+                </p>
               </div>
             )}
 
@@ -326,7 +255,6 @@ export function QuizizzMode() {
   return (
     <div className="min-h-screen bg-slate-900 text-white p-4">
       <div className="max-w-2xl mx-auto">
-        {/* Progress */}
         <div className="mb-6">
           <div className="flex justify-between text-sm text-slate-400 mb-2">
             <span>Pregunta {progress.current} de {progress.total}</span>
@@ -340,10 +268,10 @@ export function QuizizzMode() {
           </div>
         </div>
 
-        {/* Question Card */}
         <div className="bg-slate-800 rounded-2xl p-6 mb-6">
           <div className="flex items-center gap-2 text-sm text-slate-400 mb-4">
             <span className="px-2 py-1 bg-slate-700 rounded">{currentQuestion.course}</span>
+            <span className="px-2 py-1 bg-slate-700 rounded">{currentQuestion.area}</span>
           </div>
           
           <h2 className="text-xl font-semibold mb-6">{currentQuestion.questionText}</h2>
@@ -394,7 +322,6 @@ export function QuizizzMode() {
             })}
           </div>
 
-          {/* Feedback */}
           {showFeedback && currentQuestion.justification && (
             <div className="mt-6 p-4 bg-cyan-500/10 border border-cyan-500/20 rounded-xl">
               <div className="flex items-center gap-2 text-cyan-400 mb-2">
@@ -406,7 +333,6 @@ export function QuizizzMode() {
           )}
         </div>
 
-        {/* Navigation */}
         <div className="flex gap-3">
           <button
             onClick={handlePrevious}
