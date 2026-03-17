@@ -28,7 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const user = JSON.parse(storedUser);
         setCurrentUser(user);
-        setIsAuthenticated(user.role === 'admin');
+        setIsAuthenticated(true);
       } catch {
         localStorage.removeItem('atomic_quiz_auth');
         localStorage.removeItem('atomic_quiz_user');
@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (result.success && result.user) {
         setCurrentUser(result.user);
-        setIsAuthenticated(result.user.role === 'admin');
+        setIsAuthenticated(true);
         localStorage.setItem('atomic_quiz_auth', 'true');
         localStorage.setItem('atomic_quiz_user', JSON.stringify(result.user));
         return { success: true };
