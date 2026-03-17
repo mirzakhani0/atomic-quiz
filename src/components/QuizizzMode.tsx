@@ -48,6 +48,7 @@ export function QuizizzMode() {
   const [loadingStatus, setLoadingStatus] = useState('');
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [selectedWeek, setSelectedWeek] = useState('S1');
+  const [hasAnswered, setHasAnswered] = useState(false);
 
   const selectedAnswer = useSavedAnswer(currentQuestion?.id || '');
 
@@ -62,6 +63,13 @@ export function QuizizzMode() {
       setSelectedCourse(courseParam);
     }
   }, [courseParam, selectedArea, setSelectedCourse]);
+
+  useEffect(() => {
+    if (currentQuestion) {
+      const hasExistingAnswer = savedAnswers.has(currentQuestion.id);
+      setHasAnswered(hasExistingAnswer);
+    }
+  }, [currentQuestionIndex, currentQuestion, savedAnswers]);
 
   const fetchWeekQuestions = async (area: string, semana: string): Promise<SheetQuestion[]> => {
     const appsScriptUrl = APPSCRIPT_URLS[area as AreaType];
@@ -141,8 +149,9 @@ export function QuizizzMode() {
   };
 
   const handleSelectAnswer = (index: number) => {
-    if (!currentQuestion) return;
+    if (!currentQuestion || hasAnswered) return;
     saveAnswer(currentQuestion.id, index);
+    setHasAnswered(true);
   };
 
   const handleNext = () => {
@@ -150,12 +159,14 @@ export function QuizizzMode() {
       calculateResults();
     } else {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
+      setHasAnswered(false);
     }
   };
 
   const handlePrevious = () => {
     if (!isFirst) {
       setCurrentQuestionIndex(currentQuestionIndex - 1);
+      setHasAnswered(false);
     }
   };
 
@@ -371,32 +382,44 @@ export function QuizizzMode() {
           <div className="space-y-3">
             {currentQuestion.options.map((option, idx) => {
               const isSelected = selectedAnswer === idx;
+              const isCorrect = idx === currentQuestion.correctAnswer;
+              const showCorrect = hasAnswered && isCorrect;
+              const showIncorrect = hasAnswered && isSelected && !isCorrect;
               
               return (
                 <button
                   key={idx}
                   onClick={() => handleSelectAnswer(idx)}
+                  disabled={hasAnswered}
                   className={clsx(
                     'w-full p-4 rounded-xl text-left transition-all border-2 flex items-center gap-3',
-                    isSelected 
-                      ? 'bg-violet-500/20 border-violet-500' 
-                      : 'bg-slate-700 border-slate-600 hover:bg-slate-600'
+                    showCorrect 
+                      ? 'bg-emerald-500/20 border-emerald-500' 
+                      : showIncorrect
+                        ? 'bg-red-500/20 border-red-500'
+                        : isSelected 
+                          ? 'bg-violet-500/20 border-violet-500' 
+                          : 'bg-slate-700 border-slate-600 hover:bg-slate-600'
                   )}
                 >
                   <span className={clsx(
                     'w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium',
+                    showCorrect ? 'bg-emerald-500 text-white' : 
+                    showIncorrect ? 'bg-red-500 text-white' :
                     isSelected ? 'bg-violet-500 text-white' : 'bg-slate-600 text-slate-300'
                   )}>
                     {String.fromCharCode(65 + idx)}
                   </span>
                   <span>{option}</span>
-                  {isSelected && <CheckCircle className="w-5 h-5 text-violet-400 ml-auto" />}
+                  {showCorrect && <CheckCircle className="w-5 h-5 text-emerald-400 ml-auto" />}
+                  {showIncorrect && <XCircle className="w-5 h-5 text-red-400 ml-auto" />}
+                  {isSelected && !hasAnswered && <CheckCircle className="w-5 h-5 text-violet-400 ml-auto" />}
                 </button>
               );
             })}
           </div>
 
-          {currentQuestion.justification && (
+          {hasAnswered && currentQuestion.justification && (
             <div className="mt-6 p-4 bg-cyan-500/10 border border-cyan-500/20 rounded-xl">
               <div className="flex items-center gap-2 text-cyan-400 mb-2">
                 <Lightbulb className="w-5 h-5" />
