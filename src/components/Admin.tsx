@@ -19,7 +19,7 @@ interface ImportedQuestion {
 }
 
 const APPSCRIPT_URLS: Record<AreaType, string> = {
-  'Ingenierías': 'https://script.google.com/macros/s/AKfycbw-MZvuiU4Z9ySewOSDjyq81pR_NjrcTVq3szEZU1DWDjKyPFG6IvdS5nlzE1ACZz-mMw/exec',
+  'Ingenierías': 'https://script.google.com/macros/s/AKfycbyNAnb4uLxcxFiwNZ3Hmi_VIbQlornTFY1SA73zC3uQ1Tu9lwMe2VJZS9HzLLYQojSJyg/exec',
   'Biomédicas': 'https://script.google.com/macros/s/AKfycbxqr1z3gQNHR9TxPCYX_nHAVR1TMvI1veNdt5L1BpaXkULpdddI_K80LSCauzkkjz7--g/exec',
   'Sociales': 'https://script.google.com/macros/s/AKfycbwP-r3D0vvWJ_2Zx_KDyt_sWNBA-Ixs9Yemjhq6XAso454THHVNYqkZpQIty8C2yKZpzg/exec'
 };
