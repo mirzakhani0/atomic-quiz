@@ -20,8 +20,8 @@ interface ImportedQuestion {
 
 const APPSCRIPT_URLS: Record<AreaType, string> = {
   'Ingenierías': 'https://script.google.com/macros/s/AKfycbyNAnb4uLxcxFiwNZ3Hmi_VIbQlornTFY1SA73zC3uQ1Tu9lwMe2VJZS9HzLLYQojSJyg/exec',
-  'Biomédicas': 'https://script.google.com/macros/s/AKfycbxqr1z3gQNHR9TxPCYX_nHAVR1TMvI1veNdt5L1BpaXkULpdddI_K80LSCauzkkjz7--g/exec',
-  'Sociales': 'https://script.google.com/macros/s/AKfycbwP-r3D0vvWJ_2Zx_KDyt_sWNBA-Ixs9Yemjhq6XAso454THHVNYqkZpQIty8C2yKZpzg/exec'
+  'Biomédicas': 'https://script.google.com/macros/s/AKfycbzFyqDV6YyDq50OopTA26nZF67rLcLRSk1h9GRp5SOfrDnpLo0RV-oVXV7z6PUAaWQVXg/exec',
+  'Sociales': 'https://script.google.com/macros/s/AKfycbwUvvElR49vTGWx0c762zFnJTkqtGXkhAQjBGb9lFTP02dmqCTsebadSJAXc6V9zFXcHQ/exec'
 };
 
 const SEMANAS = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10', 'S11', 'S12', 'S13', 'S14', 'S15', 'S16'];
