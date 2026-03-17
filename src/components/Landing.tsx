@@ -11,7 +11,7 @@ export function Landing() {
     if (isAuthenticated) {
       navigate(path);
     } else {
-      navigate('/login');
+      navigate('/register');
     }
   };
 
@@ -39,7 +39,7 @@ export function Landing() {
         <div className="max-w-3xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-500/10 border border-cyan-500/20 rounded-full text-cyan-300 text-sm mb-6">
             <Sparkles className="w-4 h-4" />
-            <span>Plataforma de aprendizaje preuniversitario</span>
+            <span>Acceso exclusivo para alumnos registrados</span>
           </div>
           
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
@@ -48,7 +48,7 @@ export function Landing() {
           </h1>
           
           <p className="text-lg text-slate-400 mb-8">
-            Dos modos de práctica para tu preparación: Quizizz para memorizar y Simulacro para evaluar tu nivel real
+            La plataforma líder en preparación UNA. ¡Regístrate ahora y empieza a practicar!
           </p>
 
           {/* Auth Buttons */}
@@ -59,24 +59,24 @@ export function Landing() {
                 className="flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-cyan-600 to-cyan-700 rounded-xl font-bold text-white hover:from-cyan-500 hover:to-cyan-600 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-cyan-500/20"
               >
                 <Target className="w-5 h-5" />
-                Ir a mi panel
+                Ir a mi panel personal
               </button>
             ) : (
               <>
-                <button
-                  onClick={() => navigate('/login')}
-                  className="flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-cyan-600 to-cyan-700 rounded-xl font-bold text-white hover:from-cyan-500 hover:to-cyan-600 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-cyan-500/20"
-                >
-                  <LogIn className="w-5 h-5" />
-                  Soy alumno
-                </button>
-
                 <button
                   onClick={() => navigate('/register')}
                   className="flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-violet-600 to-violet-700 rounded-xl font-bold text-white hover:from-violet-500 hover:to-violet-600 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-violet-500/20"
                 >
                   <UserPlus className="w-5 h-5" />
-                  Soy nuevo
+                  Crear cuenta gratis
+                </button>
+
+                <button
+                  onClick={() => navigate('/login')}
+                  className="flex items-center justify-center gap-2 px-8 py-4 bg-slate-800 border border-slate-700 rounded-xl font-bold text-white hover:bg-slate-700 transition-all"
+                >
+                  <LogIn className="w-5 h-5" />
+                  Ya tengo cuenta
                 </button>
               </>
             )}
@@ -86,37 +86,45 @@ export function Landing() {
           <div className="grid md:grid-cols-2 gap-4 max-w-2xl mx-auto mb-12">
             <button
               onClick={() => handleAction('/quizizz')}
-              className="group p-6 bg-gradient-to-br from-violet-600 to-violet-700 rounded-2xl text-left hover:from-violet-500 hover:to-violet-600 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-violet-500/20"
+              className="group p-6 bg-gradient-to-br from-violet-600 to-violet-700 rounded-2xl text-left hover:from-violet-500 hover:to-violet-600 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-violet-500/20 relative"
             >
+              {!isAuthenticated && (
+                <div className="absolute top-4 right-4 px-2 py-1 bg-white/20 rounded text-[10px] font-bold text-white uppercase tracking-widest">
+                  Requiere Registro
+                </div>
+              )}
               <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center mb-4">
                 <BookOpen className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">Quizizz</h3>
+              <h3 className="text-xl font-bold text-white mb-2">Modo Quizizz</h3>
               <p className="text-violet-200 text-sm">
                 Aprende y memoriza con feedback inmediato. Repite las preguntas que fallaste.
               </p>
               <div className="mt-4 flex items-center gap-2 text-violet-300 text-sm">
-                <span>Sin timer</span>
-                <span>•</span>
-                <span>Explicaciones</span>
+                <Zap className="w-4 h-4" />
+                <span>{isAuthenticated ? 'Empezar ahora' : 'Regístrate para acceder'}</span>
               </div>
             </button>
 
             <button
               onClick={() => handleAction('/simulacro')}
-              className="group p-6 bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-2xl text-left hover:from-emerald-500 hover:to-emerald-600 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-500/20"
+              className="group p-6 bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-2xl text-left hover:from-emerald-500 hover:to-emerald-600 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-500/20 relative"
             >
+              {!isAuthenticated && (
+                <div className="absolute top-4 right-4 px-2 py-1 bg-white/20 rounded text-[10px] font-bold text-white uppercase tracking-widest">
+                  Solo Alumnos
+                </div>
+              )}
               <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center mb-4">
                 <Target className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">Simulacro</h3>
+              <h3 className="text-xl font-bold text-white mb-2">Simulacro Real</h3>
               <p className="text-emerald-200 text-sm">
                 Examen completo de 60 preguntas con tiempo real. Evalúa tu preparación.
               </p>
               <div className="mt-4 flex items-center gap-2 text-emerald-300 text-sm">
-                <span>180 min</span>
-                <span>•</span>
-                <span>60 preguntas</span>
+                <Zap className="w-4 h-4" />
+                <span>{isAuthenticated ? 'Rendir examen' : 'Regístrate para acceder'}</span>
               </div>
             </button>
           </div>
@@ -126,9 +134,12 @@ export function Landing() {
       {/* Áreas */}
       <section className="py-12 bg-slate-800/50">
         <div className="container mx-auto px-4">
-          <h2 className="text-2xl font-bold text-white text-center mb-8">
+          <h2 className="text-2xl font-bold text-white text-center mb-2">
             Elige tu área de estudio
           </h2>
+          <p className="text-slate-400 text-center mb-8 text-sm">
+            {isAuthenticated ? 'Selecciona tu área para comenzar' : 'Regístrate para elegir tu área y guardar tu progreso'}
+          </p>
           
           <div className="grid sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
             {AREAS.map((area) => {
@@ -146,7 +157,7 @@ export function Landing() {
                 <button
                   key={area}
                   onClick={() => handleAction(`/dashboard?area=${encodeURIComponent(area)}`)}
-                  className="p-6 bg-slate-700/50 border border-slate-600 rounded-xl text-left hover:border-cyan-500 hover:bg-slate-700 transition-all group"
+                  className="p-6 bg-slate-700/50 border border-slate-600 rounded-xl text-left hover:border-cyan-500 hover:bg-slate-700 transition-all group relative overflow-hidden"
                 >
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${colorClass}`}>
                     <Icon className="w-6 h-6" />
@@ -157,6 +168,12 @@ export function Landing() {
                   <p className="text-sm text-slate-400">
                     {info.description}
                   </p>
+                  {!isAuthenticated && (
+                    <div className="mt-4 text-[10px] text-cyan-400 font-bold uppercase tracking-tighter flex items-center gap-1">
+                      <Lock className="w-3 h-3" />
+                      Bloqueado
+                    </div>
+                  )}
                 </button>
               );
             })}
