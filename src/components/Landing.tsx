@@ -186,7 +186,15 @@ export function Landing() {
       {/* Footer */}
       <footer className="py-8 border-t border-slate-700">
         <div className="container mx-auto px-4 text-center">
-          <p className="text-slate-500 text-sm">
+          <p className="text-slate-400 text-sm mb-2">
+            Desarrollado por <span className="text-cyan-400 font-medium">Carlos Llano</span>
+          </p>
+          <p className="text-slate-500 text-xs mb-4">
+            <a href="mailto:llanovilca97@gmail.com" className="hover:text-cyan-400 transition-colors">
+              llanovilca97@gmail.com
+            </a>
+          </p>
+          <p className="text-slate-600 text-xs uppercase tracking-widest">
             © 2026 ATOMIC QUIZ - Plataforma educativa
           </p>
         </div>

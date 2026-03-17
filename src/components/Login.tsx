@@ -111,6 +111,15 @@ export function Login() {
             ← Volver al inicio
           </button>
         </div>
+
+        <div className="mt-12 text-center">
+          <p className="text-slate-500 text-xs">
+            Desarrollado por <span className="text-slate-400 font-medium">Carlos Llano</span>
+          </p>
+          <p className="text-slate-600 text-[10px] mt-1">
+            llanovilca97@gmail.com
+          </p>
+        </div>
       </div>
     </div>
   );
