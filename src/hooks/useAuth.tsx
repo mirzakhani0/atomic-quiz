@@ -14,7 +14,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 const ADMIN_USERNAME = 'admin';
 const ADMIN_PASSWORD = 'AtomicQuiz2026!';
 
-const APPSCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw1iiOUxM48ZFPbuSRtAPedgxCwrS1VpNznhfvh1G4B2pirPbf0sBN3E0WqY_LfTmM5/exec';
+const APPSCRIPT_URL = 'https://script.google.com/macros/s/AKfycbykSmkmmOjui8KYyiGDHERpYzMhZ75o6UcIzA0EYJ3ZN1sNISmowKXlq_uADg0tGXZU/exec';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);

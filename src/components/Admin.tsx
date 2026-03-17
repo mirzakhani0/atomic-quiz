@@ -27,7 +27,7 @@ interface UserRecord {
   active: boolean | string;
 }
 
-const APPSCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw1iiOUxM48ZFPbuSRtAPedgxCwrS1VpNznhfvh1G4B2pirPbf0sBN3E0WqY_LfTmM5/exec';
+const APPSCRIPT_URL = 'https://script.google.com/macros/s/AKfycbykSmkmmOjui8KYyiGDHERpYzMhZ75o6UcIzA0EYJ3ZN1sNISmowKXlq_uADg0tGXZU/exec';
 
 const APPSCRIPT_URLS: Record<AreaType, string> = {
   'Ingenierías': 'https://script.google.com/macros/s/AKfycbyNAnb4uLxcxFiwNZ3Hmi_VIbQlornTFY1SA73zC3uQ1Tu9lwMe2VJZS9HzLLYQojSJyg/exec',
