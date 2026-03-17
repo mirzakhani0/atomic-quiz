@@ -134,7 +134,13 @@ export function Landing() {
             {AREAS.map((area) => {
               const info = AREA_INFO[area];
               const icons = { 'Ingenierías': Cpu, 'Sociales': Users, 'Biomédicas': Heart };
+              const colors = {
+                'Ingenierías': 'bg-indigo-500/20 text-indigo-400',
+                'Sociales': 'bg-emerald-500/20 text-emerald-400',
+                'Biomédicas': 'bg-rose-500/20 text-rose-400'
+              };
               const Icon = icons[area];
+              const colorClass = colors[area];
               
               return (
                 <button
@@ -142,7 +148,7 @@ export function Landing() {
                   onClick={() => handleAction(`/dashboard?area=${encodeURIComponent(area)}`)}
                   className="p-6 bg-slate-700/50 border border-slate-600 rounded-xl text-left hover:border-cyan-500 hover:bg-slate-700 transition-all group"
                 >
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 bg-${info.color}-500/20 text-${info.color}-400`}>
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${colorClass}`}>
                     <Icon className="w-6 h-6" />
                   </div>
                   <h3 className="text-lg font-bold text-white mb-1 group-hover:text-cyan-400 transition-colors">
