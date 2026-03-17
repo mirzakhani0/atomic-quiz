@@ -1,19 +1,29 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore, useCurrentQuestion, useProgress, useIsLastQuestion, useIsFirstQuestion, useSavedAnswer } from '../hooks/useAppStore';
-import { AREAS, COURSES_BY_AREA, SIMULACRO_CONFIG, AreaType } from '../types';
-import { ArrowLeft, ArrowRight, Clock, Grid3X3, FileCheck, AlertTriangle, X, CheckCircle } from 'lucide-react';
+import { AREAS, AreaType } from '../types';
+import { ArrowLeft, ArrowRight, Clock, Grid3X3, FileCheck, X } from 'lucide-react';
 import clsx from 'clsx';
 
-const SIMULACRO_QUESTIONS = Array.from({ length: 60 }, (_, i) => ({
-  id: `q${i + 1}`,
-  number: i + 1,
-  questionText: `Pregunta de simulacro ${i + 1}. ¿Cuál es la respuesta correcta?`,
-  options: ['Opción A', 'Opción B', 'Opción C', 'Opción D', 'Opción E'],
-  correctAnswer: Math.floor(Math.random() * 5),
-  course: ['Aritmética', 'Álgebra', 'Física', 'Química', 'Biología', 'Historia', 'Geografía'][i % 7],
-  area: 'Ingenierías' as AreaType
-}));
+interface SheetQuestion {
+  pregunta?: string;
+  opcion_a?: string;
+  opcion_b?: string;
+  opcion_c?: string;
+  opcion_d?: string;
+  opcion_e?: string;
+  respuesta?: string;
+  justificacion?: string;
+  curso?: string;
+}
+
+const APPSCRIPT_URLS: Record<AreaType, string> = {
+  'Ingenierías': 'https://script.google.com/macros/s/AKfycbyNAnb4uLxcxFiwNZ3Hmi_VIbQlornTFY1SA73zC3uQ1Tu9lwMe2VJZS9HzLLYQojSJyg/exec',
+  'Biomédicas': 'https://script.google.com/macros/s/AKfycbzFyqDV6YyDq50OopTA26nZF67rLcLRSk1h9GRp5SOfrDnpLo0RV-oVXV7z6PUAaWQVXg/exec',
+  'Sociales': 'https://script.google.com/macros/s/AKfycbwUvvElR49vTGWx0c762zFnJTkqtGXkhAQjBGb9lFTP02dmqCTsebadSJAXc6V9zFXcHQ/exec'
+};
+
+const SEMANAS = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10', 'S11', 'S12', 'S13', 'S14', 'S15', 'S16'];
 
 export function SimulacroMode() {
   const navigate = useNavigate();
@@ -22,7 +32,6 @@ export function SimulacroMode() {
     setQuestions, currentQuestionIndex, setCurrentQuestionIndex,
     saveAnswer, savedAnswers,
     setSimulacroResult, simulacroResult,
-    startTime, setStartTime,
     status, setStatus
   } = useAppStore();
 
@@ -32,32 +41,94 @@ export function SimulacroMode() {
   const isFirst = useIsFirstQuestion();
   const selectedAnswer = useSavedAnswer(currentQuestion?.id || '');
 
+  const [step, setStep] = useState<'select' | 'loading' | 'exam'>('select');
+  const [loadingStatus, setLoadingStatus] = useState('');
   const [showNavigator, setShowNavigator] = useState(false);
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showResult, setShowResult] = useState(false);
-  const [step, setStep] = useState<'select' | 'exam'>('select');
   const [elapsedTime, setElapsedTime] = useState(0);
   const timerRef = useRef<number | null>(null);
 
-  const startExam = () => {
-    if (!selectedArea) return;
-    const shuffled = [...SIMULACRO_QUESTIONS].sort(() => Math.random() - 0.5);
-    setQuestions(shuffled);
-    setStartTime(new Date());
-    setStatus('in_progress');
-    setStep('exam');
+  const fetchAllQuestions = async (area: string): Promise<SheetQuestion[]> => {
+    const allQuestions: SheetQuestion[] = [];
+    const appsScriptUrl = APPSCRIPT_URLS[area as AreaType];
+    
+    for (let i = 0; i < SEMANAS.length; i++) {
+      const semana = SEMANAS[i];
+      setLoadingStatus(`Cargando ${semana}... (${i + 1}/16)`);
+      
+      try {
+        const url = `${appsScriptUrl}?sheet=${semana}`;
+        const response = await fetch(url, { method: 'GET', mode: 'cors', cache: 'no-cache' });
+        const text = await response.text();
+        
+        let json: { data?: SheetQuestion[] };
+        try {
+          json = JSON.parse(text);
+        } catch {
+          const textData = text.replace(/^[\s\S]*\{/, '{').replace(/\}[\s\S]*$/, '}');
+          json = JSON.parse(textData);
+        }
+        
+        if (json.data && Array.isArray(json.data)) {
+          allQuestions.push(...json.data);
+        }
+      } catch (error) {
+        console.error(`Error en ${semana}:`, error);
+      }
+    }
+    
+    return allQuestions;
   };
 
-  useEffect(() => {
-    if (status === 'in_progress') {
+  const startExam = async () => {
+    if (!selectedArea) return;
+    
+    setStep('loading');
+    setLoadingStatus('Descargando preguntas...');
+
+    try {
+      const allQuestions = await fetchAllQuestions(selectedArea);
+      
+      if (allQuestions.length < 60) {
+        setLoadingStatus(`Solo hay ${allQuestions.length} preguntas. Se usarán todas disponibles.`);
+      }
+
+      const formattedQuestions = allQuestions.slice(0, 60).map((q, idx) => {
+        const respuesta = (q.respuesta || '').toString().toUpperCase().trim();
+        const respuestaIndex = respuesta.charCodeAt(0) - 65;
+        
+        return {
+          id: `sim-${selectedArea}-${idx}`,
+          number: idx + 1,
+          questionText: q.pregunta || '',
+          options: [
+            q.opcion_a || '',
+            q.opcion_b || '',
+            q.opcion_c || '',
+            q.opcion_d || '',
+            q.opcion_e || ''
+          ],
+          correctAnswer: respuestaIndex >= 0 && respuestaIndex < 5 ? respuestaIndex : 0,
+          course: q.curso || 'General',
+          area: selectedArea,
+          justification: q.justificacion || undefined
+        };
+      });
+
+      setQuestions(formattedQuestions);
+      setStatus('in_progress');
+      setStep('exam');
+      
       timerRef.current = window.setInterval(() => {
         setElapsedTime(prev => prev + 1);
       }, 1000);
+      
+    } catch (error) {
+      setLoadingStatus('Error al cargar. Intenta de nuevo.');
+      setStep('select');
     }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [status]);
+  };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -90,7 +161,9 @@ export function SimulacroMode() {
   };
 
   const finishExam = () => {
-    const questions = SIMULACRO_QUESTIONS;
+    if (timerRef.current) clearInterval(timerRef.current);
+    
+    const questions = useAppStore.getState().questions;
     let correct = 0;
     const answers: { questionId: string; selectedOption: number | null; isCorrect: boolean; timeSpent: number }[] = [];
     const answersByCourse: Record<string, { correct: number; total: number }> = {};
@@ -124,17 +197,14 @@ export function SimulacroMode() {
     setShowResult(true);
   };
 
-  const { answeredCount, unansweredCount, unansweredIndexes } = useMemo(() => {
-    const answered = savedAnswers.size;
-    const unanswered = SIMULACRO_QUESTIONS.length - answered;
-    const indexes: number[] = [];
-    SIMULACRO_QUESTIONS.forEach((q, idx) => {
-      if (!savedAnswers.has(q.id)) indexes.push(idx);
-    });
-    return { answeredCount: answered, unansweredCount: unanswered, unansweredIndexes: indexes };
-  }, [savedAnswers]);
+  const { answeredCount, unansweredCount } = {
+    answeredCount: savedAnswers.size,
+    unansweredCount: (useAppStore.getState().questions.length || 60) - savedAnswers.size
+  };
 
   if (showResult && simulacroResult) {
+    if (timerRef.current) clearInterval(timerRef.current);
+    
     return (
       <div className="min-h-screen bg-slate-900 text-white p-4">
         <div className="max-w-2xl mx-auto">
@@ -173,26 +243,24 @@ export function SimulacroMode() {
             </div>
           </div>
 
-          <div className="mb-6">
-            <h3 className="font-semibold mb-3">Resultados por curso</h3>
-            <div className="space-y-2">
-              {Object.entries(simulacroResult.answersByCourse).map(([course, data]) => (
-                <div key={course} className="flex justify-between p-3 bg-slate-800 rounded-lg">
-                  <span>{course}</span>
-                  <span className={clsx(data.correct / data.total >= 0.5 ? 'text-emerald-400' : 'text-amber-400')}>
-                    {data.correct}/{data.total}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
           <button
             onClick={() => navigate('/')}
-            className="w-full py-4 bg-emerald-600 rounded-xl font-bold hover:bg-emerald-500 transition-colors"
+            className="w-full py-4 bg-emerald-600 rounded-xl font-bold hover:bg-emerald-500"
           >
             Volver al inicio
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 'loading') {
+    return (
+      <div className="min-h-screen bg-slate-900 text-white p-4 flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-lg font-medium mb-2">Cargando Simulacro...</p>
+          <p className="text-slate-400 text-sm">{loadingStatus}</p>
         </div>
       </div>
     );
@@ -214,8 +282,8 @@ export function SimulacroMode() {
             <div className="w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Clock className="w-8 h-8 text-emerald-400" />
             </div>
-            <h1 className="text-2xl font-bold mb-2">Simulacro - Examen Completo</h1>
-            <p className="text-slate-400">60 preguntas en 180 minutos</p>
+            <h1 className="text-2xl font-bold mb-2">Simulacro</h1>
+            <p className="text-slate-400">60 preguntas - 180 minutos</p>
           </div>
 
           <div className="space-y-4">
@@ -236,22 +304,15 @@ export function SimulacroMode() {
             <button
               onClick={startExam}
               disabled={!selectedArea}
-              className="w-full py-4 bg-emerald-600 rounded-xl font-bold hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-4 bg-emerald-600 rounded-xl font-bold hover:bg-emerald-500 disabled:opacity-50"
             >
               Iniciar Simulacro
             </button>
 
             <div className="p-4 bg-slate-800 rounded-xl">
-              <div className="flex items-center gap-2 text-amber-400 mb-2">
-                <AlertTriangle className="w-4 h-4" />
-                <span className="font-medium">Importante</span>
-              </div>
-              <ul className="text-sm text-slate-400 space-y-1">
-                <li>• 60 preguntas de opción múltiple</li>
-                <li>• 180 minutos de tiempo</li>
-                <li>• 50 puntos por pregunta correcta</li>
-                <li>• No puedes volver atrás</li>
-              </ul>
+              <p className="text-sm text-slate-400">
+                Las preguntas se cargan automáticamente desde Google Sheets (todas las semanas S1-S16).
+              </p>
             </div>
           </div>
         </div>
@@ -263,7 +324,6 @@ export function SimulacroMode() {
 
   return (
     <div className="min-h-screen bg-slate-900 text-white">
-      {/* Header */}
       <header className="sticky top-0 bg-slate-800 border-b border-slate-700 z-10">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
@@ -295,7 +355,6 @@ export function SimulacroMode() {
         </div>
       </header>
 
-      {/* Question */}
       <main className="container mx-auto px-4 py-6">
         <div className="max-w-2xl mx-auto">
           <div className="bg-slate-800 rounded-2xl p-6 mb-6">
@@ -326,7 +385,6 @@ export function SimulacroMode() {
                       {String.fromCharCode(65 + idx)}
                     </span>
                     <span>{option}</span>
-                    {isSelected && <CheckCircle className="w-5 h-5 text-emerald-500 ml-auto" />}
                   </button>
                 );
               })}
@@ -337,7 +395,7 @@ export function SimulacroMode() {
             <button
               onClick={handlePrevious}
               disabled={isFirst}
-              className="flex-1 py-3 bg-slate-700 rounded-xl font-medium hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex-1 py-3 bg-slate-700 rounded-xl font-medium hover:bg-slate-600 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <ArrowLeft className="w-4 h-4" />
               Anterior
@@ -357,18 +415,17 @@ export function SimulacroMode() {
         </div>
       </main>
 
-      {/* Navigator Modal */}
       {showNavigator && (
         <div className="fixed inset-0 bg-black/50 z-20" onClick={() => setShowNavigator(false)}>
           <div className="absolute right-0 top-0 h-full w-full max-w-sm bg-slate-800 p-4" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold">Navegador de preguntas</h3>
+              <h3 className="font-bold">Navegador</h3>
               <button onClick={() => setShowNavigator(false)} className="p-1">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="grid grid-cols-6 gap-2">
-              {SIMULACRO_QUESTIONS.map((q, idx) => {
+              {useAppStore.getState().questions.map((q, idx) => {
                 const isAnswered = savedAnswers.has(q.id);
                 const isCurrent = idx === currentQuestionIndex;
                 return (
@@ -393,14 +450,13 @@ export function SimulacroMode() {
         </div>
       )}
 
-      {/* Finish Modal */}
       {showFinishModal && (
         <div className="fixed inset-0 bg-black/50 z-30 flex items-center justify-center p-4">
           <div className="bg-slate-800 rounded-2xl p-6 max-w-sm w-full">
             <h3 className="text-xl font-bold mb-4">Finalizar Simulacro</h3>
             {unansweredCount > 0 ? (
               <p className="text-amber-400 mb-4">
-                Tienes {unansweredCount} preguntas sin responder. Se marcarán como incorrectas.
+                Tienes {unansweredCount} preguntas sin responder.
               </p>
             ) : (
               <p className="text-emerald-400 mb-4">

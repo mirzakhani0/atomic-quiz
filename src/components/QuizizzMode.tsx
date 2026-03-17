@@ -1,10 +1,29 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAppStore, useCurrentQuestion, useProgress, useIsLastQuestion, useIsFirstQuestion, useSavedAnswer } from '../hooks/useAppStore';
-import { useQuestionsStore } from '../hooks/useQuestions';
 import { AREAS, COURSES_BY_AREA, AreaType } from '../types';
-import { ArrowLeft, ArrowRight, CheckCircle, XCircle, BookOpen, RotateCcw, Home, Lightbulb, AlertCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, XCircle, BookOpen, RotateCcw, Home, Lightbulb, Loader2 } from 'lucide-react';
 import clsx from 'clsx';
+
+interface SheetQuestion {
+  pregunta?: string;
+  opcion_a?: string;
+  opcion_b?: string;
+  opcion_c?: string;
+  opcion_d?: string;
+  opcion_e?: string;
+  respuesta?: string;
+  justificacion?: string;
+  curso?: string;
+}
+
+const APPSCRIPT_URLS: Record<AreaType, string> = {
+  'Ingenierías': 'https://script.google.com/macros/s/AKfycbyNAnb4uLxcxFiwNZ3Hmi_VIbQlornTFY1SA73zC3uQ1Tu9lwMe2VJZS9HzLLYQojSJyg/exec',
+  'Biomédicas': 'https://script.google.com/macros/s/AKfycbzFyqDV6YyDq50OopTA26nZF67rLcLRSk1h9GRp5SOfrDnpLo0RV-oVXV7z6PUAaWQVXg/exec',
+  'Sociales': 'https://script.google.com/macros/s/AKfycbwUvvElR49vTGWx0c762zFnJTkqtGXkhAQjBGb9lFTP02dmqCTsebadSJAXc6V9zFXcHQ/exec'
+};
+
+const SEMANAS = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10', 'S11', 'S12', 'S13', 'S14', 'S15', 'S16'];
 
 export function QuizizzMode() {
   const navigate = useNavigate();
@@ -20,20 +39,16 @@ export function QuizizzMode() {
     setQuizizzResult, quizizzResult
   } = useAppStore();
 
-  const { getQuestionsByAreaAndCourse, getAllCourses } = useQuestionsStore();
-
   const currentQuestion = useCurrentQuestion();
   const progress = useProgress();
   const isLast = useIsLastQuestion();
   const isFirst = useIsFirstQuestion();
 
-  const [showFeedback, setShowFeedback] = useState(false);
-  const [showResult, setShowResult] = useState(false);
-  const [step, setStep] = useState<'select' | 'quiz'>('select');
+  const [step, setStep] = useState<'select' | 'loading' | 'quiz'>('select');
+  const [loadingStatus, setLoadingStatus] = useState('');
+  const [loadingError, setLoadingError] = useState<string | null>(null);
 
   const selectedAnswer = useSavedAnswer(currentQuestion?.id || '');
-
-  const availableCourses = selectedArea ? getAllCourses(selectedArea) : [];
 
   useEffect(() => {
     if (areaParam && AREAS.includes(areaParam as AreaType)) {
@@ -47,39 +62,111 @@ export function QuizizzMode() {
     }
   }, [courseParam, selectedArea, setSelectedCourse]);
 
-  const handleStartQuizizz = () => {
+  const fetchAllWeeks = async (area: string): Promise<SheetQuestion[]> => {
+    const allQuestions: SheetQuestion[] = [];
+    const appsScriptUrl = APPSCRIPT_URLS[area as AreaType];
+    
+    for (let i = 0; i < SEMANAS.length; i++) {
+      const semana = SEMANAS[i];
+      setLoadingStatus(`Cargando ${semana}... (${i + 1}/16)`);
+      
+      try {
+        const url = `${appsScriptUrl}?sheet=${semana}`;
+        const response = await fetch(url, { method: 'GET', mode: 'cors', cache: 'no-cache' });
+        const text = await response.text();
+        
+        let json: { data?: SheetQuestion[] };
+        try {
+          json = JSON.parse(text);
+        } catch {
+          const textData = text.replace(/^[\s\S]*\{/, '{').replace(/\}[\s\S]*$/, '}');
+          json = JSON.parse(textData);
+        }
+        
+        if (json.data && Array.isArray(json.data)) {
+          allQuestions.push(...json.data);
+        }
+      } catch (error) {
+        console.error(`Error en ${semana}:`, error);
+      }
+    }
+    
+    return allQuestions;
+  };
+
+  const handleStartQuizizz = async () => {
     if (!selectedArea || !selectedCourse) return;
     
-    const questions = getQuestionsByAreaAndCourse(selectedArea, selectedCourse);
-    
-    if (questions.length === 0) {
-      alert('No hay preguntas disponibles para este curso. Primero importa preguntas desde el panel de admin.');
-      return;
-    }
+    setStep('loading');
+    setLoadingStatus('Conectando con Google Sheets...');
+    setLoadingError(null);
 
-    const shuffled = [...questions].sort(() => Math.random() - 0.5);
-    setQuestions(shuffled);
-    setStep('quiz');
+    try {
+      setLoadingStatus('Descargando preguntas de todas las semanas...');
+      const allQuestions = await fetchAllWeeks(selectedArea);
+      
+      if (allQuestions.length === 0) {
+        setLoadingError('No hay preguntas disponibles en Google Sheets.');
+        setStep('select');
+        return;
+      }
+
+      const filteredQuestions = allQuestions.filter(
+        q => (q.curso || '').toLowerCase() === selectedCourse.toLowerCase()
+      );
+
+      if (filteredQuestions.length === 0) {
+        setLoadingError(`No hay preguntas para el curso "${selectedCourse}". Intenta con otro curso.`);
+        setStep('select');
+        return;
+      }
+
+      const formattedQuestions = filteredQuestions.map((q, idx) => {
+        const respuesta = (q.respuesta || '').toString().toUpperCase().trim();
+        const respuestaIndex = respuesta.charCodeAt(0) - 65;
+        
+        return {
+          id: `q-${selectedArea}-${selectedCourse}-${idx}`,
+          number: idx + 1,
+          questionText: q.pregunta || '',
+          options: [
+            q.opcion_a || '',
+            q.opcion_b || '',
+            q.opcion_c || '',
+            q.opcion_d || '',
+            q.opcion_e || ''
+          ],
+          correctAnswer: respuestaIndex >= 0 && respuestaIndex < 5 ? respuestaIndex : 0,
+          course: q.curso || selectedCourse,
+          area: selectedArea,
+          justification: q.justificacion || undefined
+        };
+      });
+
+      const shuffled = [...formattedQuestions].sort(() => Math.random() - 0.5);
+      setQuestions(shuffled);
+      setStep('quiz');
+      
+    } catch (error) {
+      setLoadingError('Error al conectar con Google Sheets. Intenta de nuevo.');
+      setStep('select');
+    }
   };
 
   const handleSelectAnswer = (index: number) => {
     if (!currentQuestion) return;
     saveAnswer(currentQuestion.id, index);
-    setShowFeedback(true);
   };
 
   const handleNext = () => {
-    setShowFeedback(false);
     if (isLast) {
       calculateResults();
-      setShowResult(true);
     } else {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     }
   };
 
   const handlePrevious = () => {
-    setShowFeedback(false);
     if (!isFirst) {
       setCurrentQuestionIndex(currentQuestionIndex - 1);
     }
@@ -88,14 +175,12 @@ export function QuizizzMode() {
   const calculateResults = () => {
     const questions = useAppStore.getState().questions;
     let correct = 0;
-    const wrongQuestions: typeof questions = [];
     const answers: { questionId: string; selectedOption: number | null; isCorrect: boolean; timeSpent: number }[] = [];
 
     questions.forEach(q => {
       const selected = savedAnswers.get(q.id) ?? null;
       const isCorrect = selected === q.correctAnswer;
       if (isCorrect) correct++;
-      else if (selected !== null) wrongQuestions.push(q);
       answers.push({ questionId: q.id, selectedOption: selected, isCorrect, timeSpent: 0 });
     });
 
@@ -106,69 +191,27 @@ export function QuizizzMode() {
       unanswered: questions.length - savedAnswers.size,
       percentage: (correct / questions.length) * 100,
       answers,
-      wrongQuestions,
+      wrongQuestions: [],
       timeSpent: 0
     });
   };
 
-  const handleRetryWrong = () => {
-    if (!quizizzResult?.wrongQuestions.length) return;
-    setQuestions([...quizizzResult.wrongQuestions]);
-    setCurrentQuestionIndex(0);
-    setShowResult(false);
-    setStep('quiz');
+  const handleFinish = () => {
+    calculateResults();
   };
 
-  if (showResult && quizizzResult) {
+  if (step === 'loading') {
     return (
-      <div className="min-h-screen bg-slate-900 text-white p-4">
-        <div className="max-w-md mx-auto">
-          <div className="text-center mb-8">
-            <div className={clsx(
-              'w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4',
-              quizizzResult.percentage >= 70 ? 'bg-emerald-500' : quizizzResult.percentage >= 50 ? 'bg-amber-500' : 'bg-red-500'
-            )}>
-              <span className="text-3xl font-bold">{Math.round(quizizzResult.percentage)}%</span>
+      <div className="min-h-screen bg-slate-900 text-white p-4 flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <Loader2 className="w-12 h-12 text-cyan-400 animate-spin mx-auto mb-4" />
+          <p className="text-lg font-medium mb-2">Cargando preguntas...</p>
+          <p className="text-slate-400 text-sm mb-4">{loadingStatus}</p>
+          {loadingError && (
+            <div className="p-3 bg-red-500/20 border border-red-500/30 rounded-xl text-red-400">
+              {loadingError}
             </div>
-            <h2 className="text-2xl font-bold mb-2">Resultados del Quizizz</h2>
-            <p className="text-slate-400">
-              {quizizzResult.correctAnswers} de {quizizzResult.totalQuestions} correctas
-            </p>
-          </div>
-
-          <div className="space-y-3 mb-8">
-            <div className="flex justify-between p-4 bg-slate-800 rounded-xl">
-              <span className="text-emerald-400">Correctas</span>
-              <span className="font-bold">{quizizzResult.correctAnswers}</span>
-            </div>
-            <div className="flex justify-between p-4 bg-slate-800 rounded-xl">
-              <span className="text-red-400">Incorrectas</span>
-              <span className="font-bold">{quizizzResult.incorrectAnswers}</span>
-            </div>
-            <div className="flex justify-between p-4 bg-slate-800 rounded-xl">
-              <span className="text-slate-400">Sin responder</span>
-              <span className="font-bold">{quizizzResult.unanswered}</span>
-            </div>
-          </div>
-
-          <div className="flex gap-3">
-            <button
-              onClick={() => navigate('/')}
-              className="flex-1 py-3 bg-slate-700 rounded-xl font-medium hover:bg-slate-600 transition-colors flex items-center justify-center gap-2"
-            >
-              <Home className="w-4 h-4" />
-              Inicio
-            </button>
-            {quizizzResult.wrongQuestions.length > 0 && (
-              <button
-                onClick={handleRetryWrong}
-                className="flex-1 py-3 bg-violet-600 rounded-xl font-medium hover:bg-violet-500 transition-colors flex items-center justify-center gap-2"
-              >
-                <RotateCcw className="w-4 h-4" />
-                Repasar errores
-              </button>
-            )}
-          </div>
+          )}
         </div>
       </div>
     );
@@ -188,8 +231,8 @@ export function QuizizzMode() {
 
           <div className="text-center mb-8">
             <BookOpen className="w-12 h-12 text-violet-400 mx-auto mb-4" />
-            <h1 className="text-2xl font-bold mb-2">Quizizz - Modo Estudio</h1>
-            <p className="text-slate-400">Selecciona área y curso para comenzar</p>
+            <h1 className="text-2xl font-bold mb-2">Quizizz</h1>
+            <p className="text-slate-400">Las preguntas se cargan automáticamente desde Google Sheets</p>
           </div>
 
           <div className="space-y-4">
@@ -216,29 +259,17 @@ export function QuizizzMode() {
                   className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl text-white"
                 >
                   <option value="">Seleccionar curso</option>
-                  {availableCourses.map(course => (
-                    <option key={course} value={course}>{course}</option>
-                  ))}
-                  {availableCourses.length === 0 && COURSES_BY_AREA[selectedArea].map(course => (
+                  {COURSES_BY_AREA[selectedArea].map(course => (
                     <option key={course} value={course}>{course}</option>
                   ))}
                 </select>
               </div>
             )}
 
-            {selectedArea && selectedCourse && (
-              <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2">
-                <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-amber-400">
-                  Las preguntas se cargan desde las que has importado en el panel de admin.
-                </p>
-              </div>
-            )}
-
             <button
               onClick={handleStartQuizizz}
               disabled={!selectedArea || !selectedCourse}
-              className="w-full py-4 bg-violet-600 rounded-xl font-bold hover:bg-violet-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-4 bg-violet-600 rounded-xl font-bold hover:bg-violet-500 disabled:opacity-50"
             >
               Comenzar Quizizz
             </button>
@@ -251,6 +282,52 @@ export function QuizizzMode() {
   if (!currentQuestion) return null;
 
   const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
+  const isLastStep = currentQuestionIndex === useAppStore.getState().questions.length - 1;
+  const hasResult = quizizzResult !== null;
+
+  if (hasResult) {
+    return (
+      <div className="min-h-screen bg-slate-900 text-white p-4">
+        <div className="max-w-md mx-auto">
+          <div className="text-center mb-8">
+            <div className={clsx(
+              'w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4',
+              quizizzResult.percentage >= 70 ? 'bg-emerald-500' : quizizzResult.percentage >= 50 ? 'bg-amber-500' : 'bg-red-500'
+            )}>
+              <span className="text-3xl font-bold">{Math.round(quizizzResult.percentage)}%</span>
+            </div>
+            <h2 className="text-2xl font-bold mb-2">Resultados</h2>
+            <p className="text-slate-400">
+              {quizizzResult.correctAnswers} de {quizizzResult.totalQuestions} correctas
+            </p>
+          </div>
+
+          <div className="space-y-3 mb-8">
+            <div className="flex justify-between p-4 bg-slate-800 rounded-xl">
+              <span className="text-emerald-400">Correctas</span>
+              <span className="font-bold">{quizizzResult.correctAnswers}</span>
+            </div>
+            <div className="flex justify-between p-4 bg-slate-800 rounded-xl">
+              <span className="text-red-400">Incorrectas</span>
+              <span className="font-bold">{quizizzResult.incorrectAnswers}</span>
+            </div>
+            <div className="flex justify-between p-4 bg-slate-800 rounded-xl">
+              <span className="text-slate-400">Sin responder</span>
+              <span className="font-bold">{quizizzResult.unanswered}</span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => navigate('/')}
+            className="w-full py-3 bg-slate-700 rounded-xl font-medium hover:bg-slate-600 flex items-center justify-center gap-2"
+          >
+            <Home className="w-4 h-4" />
+            Volver al inicio
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-900 text-white p-4">
@@ -279,29 +356,16 @@ export function QuizizzMode() {
           <div className="space-y-3">
             {currentQuestion.options.map((option, idx) => {
               const isSelected = selectedAnswer === idx;
-              const isCorrectOption = idx === currentQuestion.correctAnswer;
               
-              let bgClass = 'bg-slate-700 hover:bg-slate-600';
-              let borderClass = 'border-slate-600';
-              
-              if (showFeedback) {
-                if (isCorrectOption) {
-                  bgClass = 'bg-emerald-500/20 border-emerald-500';
-                } else if (isSelected && !isCorrect) {
-                  bgClass = 'bg-red-500/20 border-red-500';
-                }
-              } else if (isSelected) {
-                bgClass = 'bg-violet-500/20 border-violet-500';
-              }
-
               return (
                 <button
                   key={idx}
-                  onClick={() => !showFeedback && handleSelectAnswer(idx)}
-                  disabled={showFeedback}
+                  onClick={() => handleSelectAnswer(idx)}
                   className={clsx(
                     'w-full p-4 rounded-xl text-left transition-all border-2 flex items-center gap-3',
-                    bgClass, borderClass
+                    isSelected 
+                      ? 'bg-violet-500/20 border-violet-500' 
+                      : 'bg-slate-700 border-slate-600 hover:bg-slate-600'
                   )}
                 >
                   <span className={clsx(
@@ -311,18 +375,13 @@ export function QuizizzMode() {
                     {String.fromCharCode(65 + idx)}
                   </span>
                   <span>{option}</span>
-                  {showFeedback && isCorrectOption && (
-                    <CheckCircle className="w-5 h-5 text-emerald-500 ml-auto" />
-                  )}
-                  {showFeedback && isSelected && !isCorrect && (
-                    <XCircle className="w-5 h-5 text-red-500 ml-auto" />
-                  )}
+                  {isSelected && <CheckCircle className="w-5 h-5 text-violet-400 ml-auto" />}
                 </button>
               );
             })}
           </div>
 
-          {showFeedback && currentQuestion.justification && (
+          {currentQuestion.justification && (
             <div className="mt-6 p-4 bg-cyan-500/10 border border-cyan-500/20 rounded-xl">
               <div className="flex items-center gap-2 text-cyan-400 mb-2">
                 <Lightbulb className="w-5 h-5" />
@@ -337,16 +396,16 @@ export function QuizizzMode() {
           <button
             onClick={handlePrevious}
             disabled={isFirst}
-            className="flex-1 py-3 bg-slate-700 rounded-xl font-medium hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="flex-1 py-3 bg-slate-700 rounded-xl font-medium hover:bg-slate-600 disabled:opacity-50 flex items-center justify-center gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
             Anterior
           </button>
           <button
-            onClick={handleNext}
+            onClick={handleFinish}
             className="flex-1 py-3 bg-violet-600 rounded-xl font-medium hover:bg-violet-500 flex items-center justify-center gap-2"
           >
-            {isLast ? 'Finalizar' : 'Siguiente'}
+            {isLastStep ? 'Ver resultados' : 'Siguiente'}
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
