@@ -131,10 +131,8 @@ export function Admin() {
     setLoadingUsers(true);
     try {
       const url = `${APPSCRIPT_URL}?action=getUsuarios`;
-      console.log('Fetching users from:', url);
       const response = await fetch(url, { method: 'GET', mode: 'cors', cache: 'no-cache' });
       const text = await response.text();
-      console.log('Users response:', text.substring(0, 500));
       let result: { success: boolean; data?: UserRecord[]; message?: string };
       try {
         result = JSON.parse(text);
@@ -143,31 +141,36 @@ export function Admin() {
       }
       
       if (result.success && result.data) {
-        setUsers(result.data);
+        const normalizedUsers = result.data.map((u: any) => ({
+          username: String(u.username || ''),
+          password: String(u.password || ''),
+          role: String(u.role || 'alumno'),
+          nombre: String(u.nombre || ''),
+          createdAt: String(u.createdAt || ''),
+          active: u.active
+        }));
+        setUsers(normalizedUsers);
       } else {
         console.error('Error fetching users:', result.message);
-        alert('Error al cargar usuarios: ' + (result.message || 'Verifica que el Google Apps Script esté desplegado'));
       }
     } catch (error) {
       console.error('Error fetching users:', error);
-      alert('Error de conexión. Verifica que el Google Apps Script esté desplegado.');
     }
     setLoadingUsers(false);
   };
 
-  const toggleUserActive = async (username: string, currentActive: boolean) => {
+  const toggleUserActive = async (username: string, currentActive: boolean | string | number) => {
     try {
-      const newActive = !currentActive;
+      const isCurrentlyActive = currentActive === true || currentActive === 'true' || currentActive === 1 || currentActive === '1';
+      const newActive = !isCurrentlyActive;
       const url = `${APPSCRIPT_URL}?action=toggleUser&username=${encodeURIComponent(username)}&active=${newActive}`;
-      console.log('Toggling user:', url);
       const response = await fetch(url, { method: 'GET', mode: 'cors', cache: 'no-cache' });
       const text = await response.text();
-      console.log('Response:', text);
       let result: { success?: boolean; message?: string };
       try {
         result = JSON.parse(text);
       } catch {
-        result = { success: false, message: 'Error: ' + text };
+        result = { success: false, message: 'Error parsing response' };
       }
       if (result.success) {
         fetchUsers();
@@ -176,7 +179,7 @@ export function Admin() {
       }
     } catch (error) {
       console.error('Error toggling user:', error);
-      alert('Error de conexión. Verifica que el Google Apps Script esté desplegado.');
+      alert('Error de conexión');
     }
   };
 
