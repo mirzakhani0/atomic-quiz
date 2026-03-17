@@ -2,8 +2,7 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore, useCurrentQuestion, useProgress, useIsLastQuestion, useIsFirstQuestion, useSavedAnswer } from '../hooks/useAppStore';
 import { AREAS, AreaType } from '../types';
-import { ArrowLeft, ArrowRight, Clock, Grid3X3, X, RotateCcw, Printer } from 'lucide-react';
-import { printExam } from '../utils/printExam';
+import { ArrowLeft, ArrowRight, Clock, Grid3X3, X, RotateCcw } from 'lucide-react';
 import clsx from 'clsx';
 
 interface SheetQuestion {
@@ -252,16 +251,8 @@ export function SimulacroMode() {
           </button>
 
           <button
-            onClick={() => printExam(useAppStore.getState().questions, selectedArea || '')}
-            className="w-full py-4 mt-3 bg-slate-700 rounded-xl font-bold hover:bg-slate-600 flex items-center justify-center gap-2"
-          >
-            <Printer className="w-5 h-5" />
-            Descargar mi examen (PDF)
-          </button>
-
-          <button
             onClick={handleRestartSimulacro}
-            className="w-full py-4 mt-3 bg-slate-800 rounded-xl font-bold hover:bg-slate-700 flex items-center justify-center gap-2 text-slate-400"
+            className="w-full py-4 mt-3 bg-slate-700 rounded-xl font-bold hover:bg-slate-600 flex items-center justify-center gap-2"
           >
             <RotateCcw className="w-5 h-5" />
             Más Simulacro
