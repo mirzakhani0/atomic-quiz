@@ -1,9 +1,19 @@
 import { useNavigate } from 'react-router-dom';
 import { Brain, Target, BookOpen, Settings, Cpu, Heart, Users, Sparkles, UserPlus, LogIn } from 'lucide-react';
 import { AREA_INFO, AREAS } from '../types';
+import { useAuth } from '../hooks/useAuth';
 
 export function Landing() {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+
+  const handleAction = (path: string) => {
+    if (isAuthenticated) {
+      navigate(path);
+    } else {
+      navigate('/login');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -43,27 +53,39 @@ export function Landing() {
 
           {/* Auth Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-            <button
-              onClick={() => navigate('/login')}
-              className="flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-cyan-600 to-cyan-700 rounded-xl font-bold text-white hover:from-cyan-500 hover:to-cyan-600 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-cyan-500/20"
-            >
-              <LogIn className="w-5 h-5" />
-              Soy alumno
-            </button>
+            {isAuthenticated ? (
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-cyan-600 to-cyan-700 rounded-xl font-bold text-white hover:from-cyan-500 hover:to-cyan-600 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-cyan-500/20"
+              >
+                <Target className="w-5 h-5" />
+                Ir a mi panel
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={() => navigate('/login')}
+                  className="flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-cyan-600 to-cyan-700 rounded-xl font-bold text-white hover:from-cyan-500 hover:to-cyan-600 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-cyan-500/20"
+                >
+                  <LogIn className="w-5 h-5" />
+                  Soy alumno
+                </button>
 
-            <button
-              onClick={() => navigate('/register')}
-              className="flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-violet-600 to-violet-700 rounded-xl font-bold text-white hover:from-violet-500 hover:to-violet-600 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-violet-500/20"
-            >
-              <UserPlus className="w-5 h-5" />
-              Soy nuevo
-            </button>
+                <button
+                  onClick={() => navigate('/register')}
+                  className="flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-violet-600 to-violet-700 rounded-xl font-bold text-white hover:from-violet-500 hover:to-violet-600 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-violet-500/20"
+                >
+                  <UserPlus className="w-5 h-5" />
+                  Soy nuevo
+                </button>
+              </>
+            )}
           </div>
 
           {/* Mode Cards */}
           <div className="grid md:grid-cols-2 gap-4 max-w-2xl mx-auto mb-12">
             <button
-              onClick={() => navigate('/quizizz')}
+              onClick={() => handleAction('/quizizz')}
               className="group p-6 bg-gradient-to-br from-violet-600 to-violet-700 rounded-2xl text-left hover:from-violet-500 hover:to-violet-600 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-violet-500/20"
             >
               <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center mb-4">
@@ -81,7 +103,7 @@ export function Landing() {
             </button>
 
             <button
-              onClick={() => navigate('/simulacro')}
+              onClick={() => handleAction('/simulacro')}
               className="group p-6 bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-2xl text-left hover:from-emerald-500 hover:to-emerald-600 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-500/20"
             >
               <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center mb-4">
@@ -117,7 +139,7 @@ export function Landing() {
               return (
                 <button
                   key={area}
-                  onClick={() => navigate(`/quizizz?area=${encodeURIComponent(area)}`)}
+                  onClick={() => handleAction(`/dashboard?area=${encodeURIComponent(area)}`)}
                   className="p-6 bg-slate-700/50 border border-slate-600 rounded-xl text-left hover:border-cyan-500 hover:bg-slate-700 transition-all group"
                 >
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 bg-${info.color}-500/20 text-${info.color}-400`}>

@@ -1,16 +1,6 @@
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Landing, QuizizzMode, SimulacroMode, Admin, Login, Register, UserDashboard } from './components';
-import { AuthProvider, useAuth } from './hooks/useAuth';
-
-function ProtectedAdminRoute() {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <Admin /> : <Navigate to="/login" replace />;
-}
-
-function ProtectedUserRoute() {
-  const { currentUser } = useAuth();
-  return currentUser ? <UserDashboard /> : <Navigate to="/login" replace />;
-}
+import { Landing, QuizizzMode, SimulacroMode, Admin, Login, Register, UserDashboard, ProtectedRoute } from './components';
+import { AuthProvider } from './hooks/useAuth';
 
 function AppRoutes() {
   return (
@@ -18,10 +8,31 @@ function AppRoutes() {
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/dashboard" element={<ProtectedUserRoute />} />
-      <Route path="/quizizz" element={<QuizizzMode />} />
-      <Route path="/simulacro" element={<SimulacroMode />} />
-      <Route path="/admin" element={<ProtectedAdminRoute />} />
+      
+      {/* Rutas Protegidas para Alumnos */}
+      <Route path="/dashboard" element={
+        <ProtectedRoute>
+          <UserDashboard />
+        </ProtectedRoute>
+      } />
+      <Route path="/quizizz" element={
+        <ProtectedRoute>
+          <QuizizzMode />
+        </ProtectedRoute>
+      } />
+      <Route path="/simulacro" element={
+        <ProtectedRoute>
+          <SimulacroMode />
+        </ProtectedRoute>
+      } />
+      
+      {/* Ruta Protegida para Admin */}
+      <Route path="/admin" element={
+        <ProtectedRoute requireAdmin>
+          <Admin />
+        </ProtectedRoute>
+      } />
+      
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
