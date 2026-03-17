@@ -51,6 +51,20 @@ export const useAppStore = create<AppStore>((set, get) => ({
     quizizzResult: null,
     simulacroResult: null,
     startTime: null
+  }),
+
+  resetQuizizz: () => set({
+    questions: [],
+    currentQuestionIndex: 0,
+    savedAnswers: new Map(),
+    quizizzResult: null
+  }),
+
+  resetSimulacro: () => set({
+    questions: [],
+    currentQuestionIndex: 0,
+    savedAnswers: new Map(),
+    simulacroResult: null
   })
 }));
 

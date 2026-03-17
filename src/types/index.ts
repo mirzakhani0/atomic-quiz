@@ -140,6 +140,8 @@ export interface AppStore {
   setStartTime: (time: Date | null) => void;
   
   reset: () => void;
+  resetQuizizz: () => void;
+  resetSimulacro: () => void;
 }
 
 // ============================================

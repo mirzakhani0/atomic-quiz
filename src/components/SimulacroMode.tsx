@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore, useCurrentQuestion, useProgress, useIsLastQuestion, useIsFirstQuestion, useSavedAnswer } from '../hooks/useAppStore';
 import { AREAS, AreaType } from '../types';
-import { ArrowLeft, ArrowRight, Clock, Grid3X3, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Clock, Grid3X3, X, RotateCcw } from 'lucide-react';
 import clsx from 'clsx';
 
 interface SheetQuestion {
@@ -179,6 +179,11 @@ export function SimulacroMode() {
     setShowResult(true);
   };
 
+  const handleRestartSimulacro = () => {
+    useAppStore.getState().resetSimulacro();
+    setStep('select');
+  };
+
   const { answeredCount, unansweredCount } = {
     answeredCount: savedAnswers.size,
     unansweredCount: (useAppStore.getState().questions.length || 60) - savedAnswers.size
@@ -230,6 +235,14 @@ export function SimulacroMode() {
             className="w-full py-4 bg-emerald-600 rounded-xl font-bold hover:bg-emerald-500"
           >
             Volver al inicio
+          </button>
+
+          <button
+            onClick={handleRestartSimulacro}
+            className="w-full py-4 mt-3 bg-slate-700 rounded-xl font-bold hover:bg-slate-600 flex items-center justify-center gap-2"
+          >
+            <RotateCcw className="w-5 h-5" />
+            Repetir Simulacro
           </button>
         </div>
       </div>

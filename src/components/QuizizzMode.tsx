@@ -187,6 +187,11 @@ export function QuizizzMode() {
     calculateResults();
   };
 
+  const handleRestartQuiz = () => {
+    useAppStore.getState().resetQuizizz();
+    setStep('select');
+  };
+
   if (step === 'loading') {
     return (
       <div className="min-h-screen bg-slate-900 text-white p-4 flex items-center justify-center">
@@ -325,6 +330,14 @@ export function QuizizzMode() {
           >
             <Home className="w-4 h-4" />
             Volver al inicio
+          </button>
+
+          <button
+            onClick={handleRestartQuiz}
+            className="w-full py-3 mt-3 bg-violet-600 rounded-xl font-medium hover:bg-violet-500 flex items-center justify-center gap-2"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Repetir Quizizz
           </button>
         </div>
       </div>
