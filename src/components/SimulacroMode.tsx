@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore, useCurrentQuestion, useProgress, useIsLastQuestion, useIsFirstQuestion, useSavedAnswer } from '../hooks/useAppStore';
 import { AREAS, AreaType } from '../types';
-import { ArrowLeft, ArrowRight, Clock, Grid3X3, FileCheck, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Clock, Grid3X3, X } from 'lucide-react';
 import clsx from 'clsx';
 
 interface SheetQuestion {
@@ -47,59 +47,41 @@ export function SimulacroMode() {
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [selectedWeek, setSelectedWeek] = useState('S1');
   const timerRef = useRef<number | null>(null);
 
-  const fetchAllQuestions = async (area: string): Promise<SheetQuestion[]> => {
-    const allQuestions: SheetQuestion[] = [];
+  const fetchWeekQuestions = async (area: string, semana: string): Promise<SheetQuestion[]> => {
     const appsScriptUrl = APPSCRIPT_URLS[area as AreaType];
+    setLoadingStatus(`Cargando ${semana}...`);
     
-    for (let i = 0; i < SEMANAS.length; i++) {
-      const semana = SEMANAS[i];
-      setLoadingStatus(`Cargando ${semana}... (${i + 1}/16)`);
-      
-      try {
-        const url = `${appsScriptUrl}?sheet=${semana}`;
-        const response = await fetch(url, { method: 'GET', mode: 'cors', cache: 'no-cache' });
-        const text = await response.text();
-        
-        let json: { data?: SheetQuestion[] };
-        try {
-          json = JSON.parse(text);
-        } catch {
-          const textData = text.replace(/^[\s\S]*\{/, '{').replace(/\}[\s\S]*$/, '}');
-          json = JSON.parse(textData);
-        }
-        
-        if (json.data && Array.isArray(json.data)) {
-          allQuestions.push(...json.data);
-        }
-      } catch (error) {
-        console.error(`Error en ${semana}:`, error);
-      }
+    try {
+      const url = `${appsScriptUrl}?sheet=${semana}`;
+      const response = await fetch(url, { method: 'GET', mode: 'cors', cache: 'no-cache' });
+      const text = await response.text();
+      let json: { data?: SheetQuestion[] };
+      try { json = JSON.parse(text); } catch { return []; }
+      return json.data || [];
+    } catch (error) {
+      console.error('Error:', error);
+      return [];
     }
-    
-    return allQuestions;
   };
 
   const startExam = async () => {
     if (!selectedArea) return;
     
     setStep('loading');
-    setLoadingStatus('Descargando preguntas...');
+    setLoadingStatus('Cargando preguntas...');
 
     try {
-      const allQuestions = await fetchAllQuestions(selectedArea);
+      const allQuestions = await fetchWeekQuestions(selectedArea, selectedWeek);
       
-      if (allQuestions.length < 60) {
-        setLoadingStatus(`Solo hay ${allQuestions.length} preguntas. Se usarán todas disponibles.`);
-      }
-
-      const formattedQuestions = allQuestions.slice(0, 60).map((q, idx) => {
+      const formattedQuestions = allQuestions.map((q, idx) => {
         const respuesta = (q.respuesta || '').toString().toUpperCase().trim();
         const respuestaIndex = respuesta.charCodeAt(0) - 65;
         
         return {
-          id: `sim-${selectedArea}-${idx}`,
+          id: `sim-${selectedArea}-${selectedWeek}-${idx}`,
           number: idx + 1,
           questionText: q.pregunta || '',
           options: [
@@ -283,7 +265,7 @@ export function SimulacroMode() {
               <Clock className="w-8 h-8 text-emerald-400" />
             </div>
             <h1 className="text-2xl font-bold mb-2">Simulacro</h1>
-            <p className="text-slate-400">60 preguntas - 180 minutos</p>
+            <p className="text-slate-400">Selecciona el área y semana</p>
           </div>
 
           <div className="space-y-4">
@@ -301,19 +283,28 @@ export function SimulacroMode() {
               </select>
             </div>
 
+            {selectedArea && (
+              <div>
+                <label className="block text-sm text-slate-400 mb-2">Semana</label>
+                <select
+                  value={selectedWeek}
+                  onChange={(e) => setSelectedWeek(e.target.value)}
+                  className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl text-white"
+                >
+                  {SEMANAS.map(s => (
+                    <option key={s} value={s}>Semana {s}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <button
               onClick={startExam}
               disabled={!selectedArea}
               className="w-full py-4 bg-emerald-600 rounded-xl font-bold hover:bg-emerald-500 disabled:opacity-50"
             >
-              Iniciar Simulacro
+              Iniciar Simulacro - Semana {selectedWeek}
             </button>
-
-            <div className="p-4 bg-slate-800 rounded-xl">
-              <p className="text-sm text-slate-400">
-                Las preguntas se cargan automáticamente desde Google Sheets (todas las semanas S1-S16).
-              </p>
-            </div>
           </div>
         </div>
       </div>
@@ -360,6 +351,7 @@ export function SimulacroMode() {
           <div className="bg-slate-800 rounded-2xl p-6 mb-6">
             <div className="flex items-center gap-2 text-sm text-slate-400 mb-4">
               <span className="px-2 py-1 bg-slate-700 rounded">{currentQuestion.course}</span>
+              <span className="px-2 py-1 bg-slate-700 rounded">{selectedWeek}</span>
             </div>
             
             <h2 className="text-xl font-semibold mb-6">{currentQuestion.questionText}</h2>

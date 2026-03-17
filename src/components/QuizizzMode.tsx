@@ -47,6 +47,7 @@ export function QuizizzMode() {
   const [step, setStep] = useState<'select' | 'loading' | 'quiz'>('select');
   const [loadingStatus, setLoadingStatus] = useState('');
   const [loadingError, setLoadingError] = useState<string | null>(null);
+  const [selectedWeek, setSelectedWeek] = useState('S1');
 
   const selectedAnswer = useSavedAnswer(currentQuestion?.id || '');
 
@@ -62,51 +63,37 @@ export function QuizizzMode() {
     }
   }, [courseParam, selectedArea, setSelectedCourse]);
 
-  const fetchAllWeeks = async (area: string): Promise<SheetQuestion[]> => {
-    const allQuestions: SheetQuestion[] = [];
+  const fetchWeekQuestions = async (area: string, semana: string): Promise<SheetQuestion[]> => {
     const appsScriptUrl = APPSCRIPT_URLS[area as AreaType];
+    setLoadingStatus(`Cargando ${semana}...`);
     
-    for (let i = 0; i < SEMANAS.length; i++) {
-      const semana = SEMANAS[i];
-      setLoadingStatus(`Cargando ${semana}... (${i + 1}/16)`);
+    try {
+      const url = `${appsScriptUrl}?sheet=${semana}`;
+      const response = await fetch(url, { method: 'GET', mode: 'cors', cache: 'no-cache' });
+      const text = await response.text();
       
-      try {
-        const url = `${appsScriptUrl}?sheet=${semana}`;
-        const response = await fetch(url, { method: 'GET', mode: 'cors', cache: 'no-cache' });
-        const text = await response.text();
-        
-        let json: { data?: SheetQuestion[] };
-        try {
-          json = JSON.parse(text);
-        } catch {
-          const textData = text.replace(/^[\s\S]*\{/, '{').replace(/\}[\s\S]*$/, '}');
-          json = JSON.parse(textData);
-        }
-        
-        if (json.data && Array.isArray(json.data)) {
-          allQuestions.push(...json.data);
-        }
-      } catch (error) {
-        console.error(`Error en ${semana}:`, error);
-      }
+      let json: { data?: SheetQuestion[] };
+      try { json = JSON.parse(text); } catch { return []; }
+      
+      return json.data || [];
+    } catch (error) {
+      console.error('Error:', error);
+      return [];
     }
-    
-    return allQuestions;
   };
 
   const handleStartQuizizz = async () => {
     if (!selectedArea || !selectedCourse) return;
     
     setStep('loading');
-    setLoadingStatus('Conectando con Google Sheets...');
+    setLoadingStatus('Conectando...');
     setLoadingError(null);
 
     try {
-      setLoadingStatus('Descargando preguntas de todas las semanas...');
-      const allQuestions = await fetchAllWeeks(selectedArea);
+      const allQuestions = await fetchWeekQuestions(selectedArea, selectedWeek);
       
       if (allQuestions.length === 0) {
-        setLoadingError('No hay preguntas disponibles en Google Sheets.');
+        setLoadingError(`No hay preguntas en ${selectedWeek}. Intenta con otra semana.`);
         setStep('select');
         return;
       }
@@ -116,7 +103,7 @@ export function QuizizzMode() {
       );
 
       if (filteredQuestions.length === 0) {
-        setLoadingError(`No hay preguntas para el curso "${selectedCourse}". Intenta con otro curso.`);
+        setLoadingError(`No hay preguntas para "${selectedCourse}" en ${selectedWeek}.`);
         setStep('select');
         return;
       }
@@ -126,7 +113,7 @@ export function QuizizzMode() {
         const respuestaIndex = respuesta.charCodeAt(0) - 65;
         
         return {
-          id: `q-${selectedArea}-${selectedCourse}-${idx}`,
+          id: `q-${selectedArea}-${selectedWeek}-${selectedCourse}-${idx}`,
           number: idx + 1,
           questionText: q.pregunta || '',
           options: [
@@ -148,7 +135,7 @@ export function QuizizzMode() {
       setStep('quiz');
       
     } catch (error) {
-      setLoadingError('Error al conectar con Google Sheets. Intenta de nuevo.');
+      setLoadingError('Error al conectar. Intenta de nuevo.');
       setStep('select');
     }
   };
@@ -252,6 +239,21 @@ export function QuizizzMode() {
 
             {selectedArea && (
               <div>
+                <label className="block text-sm text-slate-400 mb-2">Semana a repasar</label>
+                <select
+                  value={selectedWeek}
+                  onChange={(e) => setSelectedWeek(e.target.value)}
+                  className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl text-white"
+                >
+                  {SEMANAS.map(s => (
+                    <option key={s} value={s}>Semana {s}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {selectedArea && (
+              <div>
                 <label className="block text-sm text-slate-400 mb-2">Curso</label>
                 <select
                   value={selectedCourse || ''}
@@ -271,7 +273,7 @@ export function QuizizzMode() {
               disabled={!selectedArea || !selectedCourse}
               className="w-full py-4 bg-violet-600 rounded-xl font-bold hover:bg-violet-500 disabled:opacity-50"
             >
-              Comenzar Quizizz
+              Comenzar Quizizz - Semana {selectedWeek}
             </button>
           </div>
         </div>
