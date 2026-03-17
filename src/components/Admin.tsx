@@ -151,12 +151,25 @@ export function Admin() {
 
   const toggleUserActive = async (username: string, currentActive: boolean) => {
     try {
-      const url = `${APPSCRIPT_URL}?action=toggleUser&username=${encodeURIComponent(username)}&active=${!currentActive}`;
+      const newActive = !currentActive;
+      const url = `${APPSCRIPT_URL}?action=toggleUser&username=${encodeURIComponent(username)}&active=${newActive}`;
       const response = await fetch(url, { method: 'GET', mode: 'cors', cache: 'no-cache' });
-      await response.text();
-      fetchUsers();
+      const text = await response.text();
+      let result: { success?: boolean; message?: string };
+      try {
+        result = JSON.parse(text);
+      } catch {
+        result = { success: false, message: 'Error parsing response' };
+      }
+      console.log('Toggle result:', result);
+      if (result.success) {
+        fetchUsers();
+      } else {
+        alert(result.message || 'Error al cambiar estado');
+      }
     } catch (error) {
       console.error('Error toggling user:', error);
+      alert('Error de conexión');
     }
   };
 
