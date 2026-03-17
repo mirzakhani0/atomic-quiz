@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Brain, Target, BookOpen, Settings, Cpu, Heart, Users, Sparkles, UserPlus, LogIn } from 'lucide-react';
+import { Brain, Target, BookOpen, Settings, Cpu, Heart, Users, Sparkles, UserPlus, LogIn, Zap, Lock } from 'lucide-react';
 import { AREA_INFO, AREAS } from '../types';
 import { useAuth } from '../hooks/useAuth';
 
