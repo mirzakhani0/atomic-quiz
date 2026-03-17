@@ -131,20 +131,26 @@ export function Admin() {
     setLoadingUsers(true);
     try {
       const url = `${APPSCRIPT_URL}?action=getUsuarios`;
+      console.log('Fetching users from:', url);
       const response = await fetch(url, { method: 'GET', mode: 'cors', cache: 'no-cache' });
       const text = await response.text();
-      let result: { success: boolean; data?: UserRecord[] };
+      console.log('Users response:', text.substring(0, 500));
+      let result: { success: boolean; data?: UserRecord[]; message?: string };
       try {
         result = JSON.parse(text);
       } catch {
-        result = { success: false, data: [] };
+        result = { success: false, data: [], message: 'Error parsing response' };
       }
       
       if (result.success && result.data) {
         setUsers(result.data);
+      } else {
+        console.error('Error fetching users:', result.message);
+        alert('Error al cargar usuarios: ' + (result.message || 'Verifica que el Google Apps Script esté desplegado'));
       }
     } catch (error) {
       console.error('Error fetching users:', error);
+      alert('Error de conexión. Verifica que el Google Apps Script esté desplegado.');
     }
     setLoadingUsers(false);
   };
@@ -153,15 +159,16 @@ export function Admin() {
     try {
       const newActive = !currentActive;
       const url = `${APPSCRIPT_URL}?action=toggleUser&username=${encodeURIComponent(username)}&active=${newActive}`;
+      console.log('Toggling user:', url);
       const response = await fetch(url, { method: 'GET', mode: 'cors', cache: 'no-cache' });
       const text = await response.text();
+      console.log('Response:', text);
       let result: { success?: boolean; message?: string };
       try {
         result = JSON.parse(text);
       } catch {
-        result = { success: false, message: 'Error parsing response' };
+        result = { success: false, message: 'Error: ' + text };
       }
-      console.log('Toggle result:', result);
       if (result.success) {
         fetchUsers();
       } else {
@@ -169,7 +176,7 @@ export function Admin() {
       }
     } catch (error) {
       console.error('Error toggling user:', error);
-      alert('Error de conexión');
+      alert('Error de conexión. Verifica que el Google Apps Script esté desplegado.');
     }
   };
 
