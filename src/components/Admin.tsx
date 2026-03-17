@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AREAS, COURSES_BY_AREA, AreaType } from '../types';
-import { ArrowLeft, Upload, Database, LogOut, CheckCircle, XCircle, Loader2, RefreshCw, Link } from 'lucide-react';
+import { ArrowLeft, Upload, Database, LogOut, CheckCircle, XCircle, Loader2, RefreshCw, Link, Users, BookOpen } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useQuestionsStore } from '../hooks/useQuestions';
 import clsx from 'clsx';
@@ -18,6 +18,17 @@ interface ImportedQuestion {
   curso?: string;
 }
 
+interface UserRecord {
+  username: string;
+  password: string;
+  role: string;
+  nombre: string;
+  createdAt: string;
+  active: boolean | string;
+}
+
+const APPSCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw1iiOUxM48ZFPbuSRtAPedgxCwrS1VpNznhfvh1G4B2pirPbf0sBN3E0WqY_LfTmM5/exec';
+
 const APPSCRIPT_URLS: Record<AreaType, string> = {
   'Ingenierías': 'https://script.google.com/macros/s/AKfycbyNAnb4uLxcxFiwNZ3Hmi_VIbQlornTFY1SA73zC3uQ1Tu9lwMe2VJZS9HzLLYQojSJyg/exec',
   'Biomédicas': 'https://script.google.com/macros/s/AKfycbzFyqDV6YyDq50OopTA26nZF67rLcLRSk1h9GRp5SOfrDnpLo0RV-oVXV7z6PUAaWQVXg/exec',
@@ -31,11 +42,15 @@ export function Admin() {
   const { logout } = useAuth();
   const { addQuestions, getAllCourses, clearQuestions } = useQuestionsStore();
   
+  const [activeTab, setActiveTab] = useState<'questions' | 'users'>('questions');
   const [area, setArea] = useState<AreaType>('Ingenierías');
   const [semana, setSemana] = useState('S1');
   const [course, setCourse] = useState('');
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ success: boolean; message: string; count?: number } | null>(null);
+  
+  const [users, setUsers] = useState<UserRecord[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
   const fetchFromGoogleSheets = async (): Promise<void> => {
     const appsScriptUrl = APPSCRIPT_URLS[area];
@@ -58,10 +73,9 @@ export function Admin() {
         json = JSON.parse(textData);
       }
       
-      const data = json.data || [];
-      const importedQuestions: ImportedQuestion[] = data;
+      const importedQuestions = json.data || [];
       
-      const filteredQuestions = course 
+      const filteredQuestions = course
         ? importedQuestions.filter(q => (q.curso || '').toLowerCase() === course.toLowerCase())
         : importedQuestions;
 
@@ -111,6 +125,205 @@ export function Admin() {
     setImporting(false);
   };
 
+  const fetchUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const url = `${APPSCRIPT_URL}?action=getUsuarios`;
+      const response = await fetch(url, { method: 'GET', mode: 'cors', cache: 'no-cache' });
+      const text = await response.text();
+      let result: { success: boolean; data?: UserRecord[] };
+      try {
+        result = JSON.parse(text);
+      } catch {
+        result = { success: false, data: [] };
+      }
+      
+      if (result.success && result.data) {
+        setUsers(result.data);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+    setLoadingUsers(false);
+  };
+
+  const toggleUserActive = async (username: string, currentActive: boolean) => {
+    try {
+      const url = `${APPSCRIPT_URL}?action=toggleUser&username=${encodeURIComponent(username)}&active=${!currentActive}`;
+      const response = await fetch(url, { method: 'GET', mode: 'cors', cache: 'no-cache' });
+      await response.text();
+      fetchUsers();
+    } catch (error) {
+      console.error('Error toggling user:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'users' && users.length === 0) {
+      fetchUsers();
+    }
+  }, [activeTab]);
+
+  const renderQuestionsTab = () => (
+    <>
+      <div className="bg-slate-800 rounded-2xl p-6">
+        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <Link className="w-5 h-5 text-cyan-400" />
+          Importar desde Google Sheets
+        </h2>
+
+        <div className="grid md:grid-cols-3 gap-4 mb-4">
+          <div>
+            <label className="block text-sm text-slate-400 mb-2">Área</label>
+            <select
+              value={area}
+              onChange={(e) => { setArea(e.target.value as AreaType); setCourse(''); }}
+              className="w-full p-3 bg-slate-700 border border-slate-600 rounded-xl"
+            >
+              {AREAS.map(a => (
+                <option key={a} value={a}>{a}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm text-slate-400 mb-2">Semana</label>
+            <select
+              value={semana}
+              onChange={(e) => setSemana(e.target.value)}
+              className="w-full p-3 bg-slate-700 border border-slate-600 rounded-xl"
+            >
+              {SEMANAS.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm text-slate-400 mb-2">Curso</label>
+            <select
+              value={course}
+              onChange={(e) => setCourse(e.target.value)}
+              className="w-full p-3 bg-slate-700 border border-slate-600 rounded-xl"
+            >
+              <option value="">Todos</option>
+              {COURSES_BY_AREA[area].map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <button
+          onClick={handleImport}
+          disabled={!area || !semana || importing}
+          className="w-full py-3 bg-cyan-600 rounded-xl font-medium hover:bg-cyan-500 disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {importing ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Importando...
+            </>
+          ) : (
+            <>
+              <Upload className="w-5 h-5" />
+              Importar de {area} - {semana}
+            </>
+          )}
+        </button>
+
+        {importResult && importResult.success && (
+          <div className="mt-4 p-3 bg-emerald-500/20 text-emerald-400 rounded-xl flex items-center gap-2">
+            <CheckCircle className="w-5 h-5" />
+            <span>{importResult.message}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-slate-800 rounded-2xl p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold">Nota</h2>
+          <button
+            onClick={() => { if (confirm('¿Eliminar todo?')) clearQuestions(); }}
+            className="flex items-center gap-2 px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-sm"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Limpiar
+          </button>
+        </div>
+        <p className="text-slate-400 text-sm">
+          Las preguntas importadas se guardan localmente. Los usuarios pueden acceder a Quizizz que carga directamente desde Google Sheets.
+        </p>
+      </div>
+    </>
+  );
+
+  const renderUsersTab = () => (
+    <div className="bg-slate-800 rounded-2xl p-6">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <Users className="w-5 h-5 text-cyan-400" />
+          Usuarios Registrados
+        </h2>
+        <button
+          onClick={fetchUsers}
+          disabled={loadingUsers}
+          className="flex items-center gap-2 px-3 py-1.5 bg-cyan-600 rounded-lg text-sm hover:bg-cyan-500 disabled:opacity-50"
+        >
+          <RefreshCw className={clsx("w-4 h-4", loadingUsers && "animate-spin")} />
+          Actualizar
+        </button>
+      </div>
+
+      {loadingUsers ? (
+        <div className="text-center py-8">
+          <Loader2 className="w-8 h-8 text-cyan-400 animate-spin mx-auto" />
+          <p className="text-slate-400 mt-2">Cargando usuarios...</p>
+        </div>
+      ) : users.length === 0 ? (
+        <div className="text-center py-8">
+          <Users className="w-12 h-12 text-slate-600 mx-auto mb-2" />
+          <p className="text-slate-400">No hay usuarios registrados</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {users.filter(u => u.role !== 'admin').map((user) => {
+            const isActive = user.active === true || user.active === 'true' || user.active === '1';
+            return (
+              <div key={user.username} className="flex items-center justify-between p-4 bg-slate-700 rounded-xl">
+                <div>
+                  <p className="font-medium">{user.nombre || user.username}</p>
+                  <p className="text-sm text-slate-400">@{user.username}</p>
+                </div>
+                <button
+                  onClick={() => toggleUserActive(user.username, isActive)}
+                  className={clsx(
+                    'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm',
+                    isActive 
+                      ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30' 
+                      : 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
+                  )}
+                >
+                  {isActive ? (
+                    <>
+                      <CheckCircle className="w-4 h-4" />
+                      Activo
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="w-4 h-4" />
+                      Inactivo
+                    </>
+                  )}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-slate-900 text-white p-4">
       <div className="max-w-4xl mx-auto">
@@ -137,99 +350,38 @@ export function Admin() {
           </div>
           <div>
             <h1 className="text-2xl font-bold">Panel de Administración</h1>
-            <p className="text-slate-400">Importa preguntas desde Google Sheets</p>
+            <p className="text-slate-400">Gestiona preguntas y usuarios</p>
           </div>
         </div>
 
-        <div className="bg-slate-800 rounded-2xl p-6 mb-6">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Link className="w-5 h-5 text-cyan-400" />
-            Importar desde Google Sheets
-          </h2>
-
-          <div className="grid md:grid-cols-3 gap-4 mb-4">
-            <div>
-              <label className="block text-sm text-slate-400 mb-2">Área</label>
-              <select
-                value={area}
-                onChange={(e) => { setArea(e.target.value as AreaType); setCourse(''); }}
-                className="w-full p-3 bg-slate-700 border border-slate-600 rounded-xl"
-              >
-                {AREAS.map(a => (
-                  <option key={a} value={a}>{a}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm text-slate-400 mb-2">Semana</label>
-              <select
-                value={semana}
-                onChange={(e) => setSemana(e.target.value)}
-                className="w-full p-3 bg-slate-700 border border-slate-600 rounded-xl"
-              >
-                {SEMANAS.map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm text-slate-400 mb-2">Curso</label>
-              <select
-                value={course}
-                onChange={(e) => setCourse(e.target.value)}
-                className="w-full p-3 bg-slate-700 border border-slate-600 rounded-xl"
-              >
-                <option value="">Todos</option>
-                {COURSES_BY_AREA[area].map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
+        <div className="flex gap-2 mb-6">
           <button
-            onClick={handleImport}
-            disabled={!area || !semana || importing}
-            className="w-full py-3 bg-cyan-600 rounded-xl font-medium hover:bg-cyan-500 disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {importing ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Importando...
-              </>
-            ) : (
-              <>
-                <Upload className="w-5 h-5" />
-                Importar de {area} - {semana}
-              </>
+            onClick={() => setActiveTab('questions')}
+            className={clsx(
+              'flex items-center gap-2 px-4 py-2 rounded-lg transition-colors',
+              activeTab === 'questions' 
+                ? 'bg-cyan-600 text-white' 
+                : 'bg-slate-800 text-slate-400 hover:text-white'
             )}
+          >
+            <BookOpen className="w-4 h-4" />
+            Preguntas
           </button>
-
-          {importResult && importResult.success && (
-            <div className="mt-4 p-3 bg-emerald-500/20 text-emerald-400 rounded-xl flex items-center gap-2">
-              <CheckCircle className="w-5 h-5" />
-              <span>{importResult.message}</span>
-            </div>
-          )}
+          <button
+            onClick={() => setActiveTab('users')}
+            className={clsx(
+              'flex items-center gap-2 px-4 py-2 rounded-lg transition-colors',
+              activeTab === 'users' 
+                ? 'bg-cyan-600 text-white' 
+                : 'bg-slate-800 text-slate-400 hover:text-white'
+            )}
+          >
+            <Users className="w-4 h-4" />
+            Usuarios
+          </button>
         </div>
 
-        <div className="bg-slate-800 rounded-2xl p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Nota</h2>
-            <button
-              onClick={() => { if (confirm('¿Eliminar todo?')) clearQuestions(); }}
-              className="flex items-center gap-2 px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-sm"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Limpiar
-            </button>
-          </div>
-          <p className="text-slate-400 text-sm">
-            Las preguntas importadas se guardan localmente. Para que los usuarios puedan acceder sin importar cada vez,告诉他们 usar Quizizz que carga directamente desde Google Sheets.
-          </p>
-        </div>
+        {activeTab === 'questions' ? renderQuestionsTab() : renderUsersTab()}
       </div>
     </div>
   );

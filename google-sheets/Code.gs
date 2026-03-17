@@ -19,6 +19,9 @@ function doGet(e) {
   if (action === 'deleteUsuario') {
     return handleDeleteUsuario(e);
   }
+  if (action === 'toggleUser') {
+    return handleToggleUser(e);
+  }
   
   return HtmlService.createHtmlOutputFromFile('Index')
     .setTitle('Atomic Quiz API')
@@ -117,6 +120,14 @@ function handleDeleteUsuario(e) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+function handleToggleUser(e) {
+  var username = e.parameter.username;
+  var active = e.parameter.active === 'true';
+  var result = toggleUserActive(username, active);
+  return ContentService.createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
 function getSheet(sheetName) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(sheetName);
@@ -129,7 +140,7 @@ function getSheet(sheetName) {
 function getHeaders(sheetName) {
   var headers = {
     'Alumnos': ['nombre', 'apellido', 'carrera', 'area', 'celular', 'dni', 'email', 'username', 'password', 'fecha'],
-    'Usuarios': ['username', 'password', 'role', 'nombre', 'createdAt']
+    'Usuarios': ['username', 'password', 'role', 'nombre', 'createdAt', 'active']
   };
   return headers[sheetName] || [];
 }
@@ -213,14 +224,19 @@ function login(username, password) {
     
     for (var i = 1; i < data.length; i++) {
       if (data[i][0].toLowerCase() === userLower && data[i][1] === password) {
-        return { 
-          success: true, 
-          user: {
-            username: data[i][0],
-            role: data[i][2],
-            nombre: data[i][3]
-          }
-        };
+        var isActive = data[i][5];
+        if (isActive !== false && isActive !== 'false' && isActive !== 0) {
+          return { 
+            success: true, 
+            user: {
+              username: data[i][0],
+              role: data[i][2],
+              nombre: data[i][3]
+            }
+          };
+        } else {
+          return { success: false, message: 'Tu cuenta aún no ha sido activada. Contacta al administrador.' };
+        }
       }
     }
     
@@ -336,11 +352,34 @@ function registrarAlumnoConUsuario(data) {
       data.password,
       'alumno',
       data.nombre + ' ' + data.apellido,
-      new Date()
+      new Date(),
+      false
     ];
     sheetUsuarios.appendRow(rowUsuario);
     
-    return { success: true, message: 'Alumno registrado exitosamente' };
+    return { success: true, message: 'Alumno registrado exitosamente. Espera la activación del administrador.' };
+  } catch (error) {
+    return { success: false, message: error.toString() };
+  }
+}
+
+function toggleUserActive(username, active) {
+  try {
+    var sheet = getSheet('Usuarios');
+    var data = sheet.getDataRange().getValues();
+    var userLower = username.toLowerCase();
+    
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0].toLowerCase() === userLower) {
+        sheet.getRange(i + 1, 6).setValue(active);
+        return { 
+          success: true, 
+          message: active ? 'Usuario activado' : 'Usuario desactivado' 
+        };
+      }
+    }
+    
+    return { success: false, message: 'Usuario no encontrado' };
   } catch (error) {
     return { success: false, message: error.toString() };
   }
