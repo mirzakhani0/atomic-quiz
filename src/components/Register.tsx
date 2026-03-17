@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, UserPlus, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import { AREAS, CARRERAS, AreaType } from '../types';
 
-const APPSCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxId-Jp2w8lzmmzACbCidS9w8MAUIrDPjmSRKGxHJk577wkECLXvvCXb90lJdAitFV1/exec';
+const APPSCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw0MpSBuWXFG1-zWBlHIed3uU4RizWVK24DZpREnxQJQ_bewaGPsF0iFlGht72BcwWm/exec';
 
 export function Register() {
   const navigate = useNavigate();
