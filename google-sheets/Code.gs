@@ -219,19 +219,30 @@ function createUser(data) {
 function login(username, password) {
   try {
     var sheet = getSheet('Usuarios');
-    var data = sheet.getDataRange().getValues();
-    var userLower = username.toLowerCase();
+    var dataRange = sheet.getDataRange();
+    
+    if (dataRange.getLastRow() < 2) {
+      return { success: false, message: 'Usuario o contraseña incorrectos' };
+    }
+    
+    var data = dataRange.getValues();
+    var userLower = String(username).toLowerCase();
     
     for (var i = 1; i < data.length; i++) {
-      if (data[i][0].toLowerCase() === userLower && data[i][1] === password) {
+      if (!data[i][0] || !data[i][1]) continue;
+      
+      var storedUsername = String(data[i][0]).toLowerCase();
+      var storedPassword = String(data[i][1]);
+      
+      if (storedUsername === userLower && storedPassword === password) {
         var isActive = data[i][5];
-        if (isActive !== false && isActive !== 'false' && isActive !== 0) {
+        if (isActive !== false && isActive !== 'false' && isActive !== 0 && isActive !== '0') {
           return { 
             success: true, 
             user: {
               username: data[i][0],
-              role: data[i][2],
-              nombre: data[i][3]
+              role: data[i][2] || 'alumno',
+              nombre: data[i][3] || ''
             }
           };
         } else {

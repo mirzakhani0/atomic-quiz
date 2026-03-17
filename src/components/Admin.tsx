@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AREAS, COURSES_BY_AREA, AreaType } from '../types';
-import { ArrowLeft, Upload, Database, LogOut, CheckCircle, XCircle, Loader2, RefreshCw, Link, Users, BookOpen } from 'lucide-react';
+import { ArrowLeft, Upload, Database, LogOut, CheckCircle, XCircle, Loader2, RefreshCw, Link, Users, BookOpen, Bell, UserCheck, Shield } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useQuestionsStore } from '../hooks/useQuestions';
 import clsx from 'clsx';
@@ -51,6 +51,8 @@ export function Admin() {
   
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'active' | 'inactive'>('all');
+  const [approvingAll, setApprovingAll] = useState(false);
 
   const fetchFromGoogleSheets = async (): Promise<void> => {
     const appsScriptUrl = APPSCRIPT_URLS[area];
@@ -158,6 +160,38 @@ export function Admin() {
     }
   };
 
+  const approveAllPending = async () => {
+    const pendingUsers = users.filter(u => {
+      const isActive = u.active === true || u.active === 'true' || u.active === '1';
+      return !isActive;
+    });
+    
+    if (pendingUsers.length === 0) return;
+    
+    setApprovingAll(true);
+    for (const user of pendingUsers) {
+      await toggleUserActive(user.username, false);
+    }
+    setApprovingAll(false);
+  };
+
+  const filteredUsers = useMemo(() => {
+    return users.filter(u => {
+      const isActive = u.active === true || u.active === 'true' || u.active === '1';
+      if (filterStatus === 'pending') return !isActive;
+      if (filterStatus === 'active') return isActive;
+      if (filterStatus === 'inactive') return !isActive;
+      return true;
+    });
+  }, [users, filterStatus]);
+
+  const pendingCount = useMemo(() => {
+    return users.filter(u => {
+      const isActive = u.active === true || u.active === 'true' || u.active === '1';
+      return !isActive;
+    }).length;
+  }, [users]);
+
   useEffect(() => {
     if (activeTab === 'users' && users.length === 0) {
       fetchUsers();
@@ -260,19 +294,61 @@ export function Admin() {
 
   const renderUsersTab = () => (
     <div className="bg-slate-800 rounded-2xl p-6">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
         <h2 className="text-lg font-semibold flex items-center gap-2">
           <Users className="w-5 h-5 text-cyan-400" />
           Usuarios Registrados
+          {pendingCount > 0 && (
+            <span className="ml-2 px-2 py-0.5 bg-amber-500/20 text-amber-400 text-sm rounded-full flex items-center gap-1">
+              <Bell className="w-3 h-3" />
+              {pendingCount} pendiente{pendingCount > 1 ? 's' : ''}
+            </span>
+          )}
         </h2>
-        <button
-          onClick={fetchUsers}
-          disabled={loadingUsers}
-          className="flex items-center gap-2 px-3 py-1.5 bg-cyan-600 rounded-lg text-sm hover:bg-cyan-500 disabled:opacity-50"
-        >
-          <RefreshCw className={clsx("w-4 h-4", loadingUsers && "animate-spin")} />
-          Actualizar
-        </button>
+        <div className="flex gap-2">
+          {pendingCount > 0 && (
+            <button
+              onClick={approveAllPending}
+              disabled={approvingAll}
+              className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 rounded-lg text-sm hover:bg-emerald-500 disabled:opacity-50"
+            >
+              {approvingAll ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <UserCheck className="w-4 h-4" />
+              )}
+              Aprobar todos ({pendingCount})
+            </button>
+          )}
+          <button
+            onClick={fetchUsers}
+            disabled={loadingUsers}
+            className="flex items-center gap-2 px-3 py-1.5 bg-cyan-600 rounded-lg text-sm hover:bg-cyan-500 disabled:opacity-50"
+          >
+            <RefreshCw className={clsx("w-4 h-4", loadingUsers && "animate-spin")} />
+            Actualizar
+          </button>
+        </div>
+      </div>
+
+      <div className="flex gap-2 mb-4">
+        {(['all', 'pending', 'active', 'inactive'] as const).map(status => (
+          <button
+            key={status}
+            onClick={() => setFilterStatus(status)}
+            className={clsx(
+              'px-3 py-1.5 rounded-lg text-sm transition-colors',
+              filterStatus === status
+                ? 'bg-cyan-600 text-white'
+                : 'bg-slate-700 text-slate-400 hover:text-white'
+            )}
+          >
+            {status === 'all' && 'Todos'}
+            {status === 'pending' && `Pendientes (${pendingCount})`}
+            {status === 'active' && 'Activos'}
+            {status === 'inactive' && 'Inactivos'}
+          </button>
+        ))}
       </div>
 
       {loadingUsers ? (
@@ -280,20 +356,46 @@ export function Admin() {
           <Loader2 className="w-8 h-8 text-cyan-400 animate-spin mx-auto" />
           <p className="text-slate-400 mt-2">Cargando usuarios...</p>
         </div>
-      ) : users.length === 0 ? (
+      ) : filteredUsers.length === 0 ? (
         <div className="text-center py-8">
           <Users className="w-12 h-12 text-slate-600 mx-auto mb-2" />
-          <p className="text-slate-400">No hay usuarios registrados</p>
+          <p className="text-slate-400">
+            {filterStatus === 'pending' ? 'No hay usuarios pendientes' : 
+             filterStatus === 'active' ? 'No hay usuarios activos' :
+             filterStatus === 'inactive' ? 'No hay usuarios inactivos' :
+             'No hay usuarios registrados'}
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
-          {users.filter(u => u.role !== 'admin').map((user) => {
+          {filteredUsers.map((user) => {
             const isActive = user.active === true || user.active === 'true' || user.active === '1';
+            const isPending = !isActive;
             return (
-              <div key={user.username} className="flex items-center justify-between p-4 bg-slate-700 rounded-xl">
-                <div>
-                  <p className="font-medium">{user.nombre || user.username}</p>
-                  <p className="text-sm text-slate-400">@{user.username}</p>
+              <div key={user.username} className={clsx(
+                "flex items-center justify-between p-4 rounded-xl",
+                isPending ? "bg-amber-500/10 border border-amber-500/20" : "bg-slate-700"
+              )}>
+                <div className="flex items-center gap-3">
+                  <div className={clsx(
+                    "w-10 h-10 rounded-full flex items-center justify-center",
+                    isActive ? "bg-emerald-500/20 text-emerald-400" : 
+                    isPending ? "bg-amber-500/20 text-amber-400" : "bg-red-500/20 text-red-400"
+                  )}>
+                    {isActive ? <CheckCircle className="w-5 h-5" /> :
+                     isPending ? <Bell className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
+                  </div>
+                  <div>
+                    <p className="font-medium flex items-center gap-2">
+                      {user.nombre || user.username}
+                      {isPending && (
+                        <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded-full">
+                          Pendiente
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-sm text-slate-400">@{user.username}</p>
+                  </div>
                 </div>
                 <button
                   onClick={() => toggleUserActive(user.username, isActive)}
@@ -312,7 +414,7 @@ export function Admin() {
                   ) : (
                     <>
                       <XCircle className="w-4 h-4" />
-                      Inactivo
+                      Pendiente
                     </>
                   )}
                 </button>

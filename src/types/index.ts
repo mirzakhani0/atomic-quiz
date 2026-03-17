@@ -55,7 +55,7 @@ export interface User {
   username: string;
   role: 'admin' | 'alumno';
   nombre: string;
-  active?: boolean;
+  active?: boolean | string | number;
 }
 
 export interface Alumno {
