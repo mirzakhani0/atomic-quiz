@@ -48,6 +48,68 @@ export interface Student {
 }
 
 // ============================================
+// USUARIOS Y REGISTRO
+// ============================================
+
+export interface User {
+  username: string;
+  role: 'admin' | 'alumno';
+  nombre: string;
+}
+
+export interface Alumno {
+  nombre: string;
+  apellido: string;
+  carrera: string;
+  area: AreaType;
+  celular: string;
+  dni: string;
+  email: string;
+  username: string;
+  password: string;
+}
+
+export interface RegisterData {
+  nombre: string;
+  apellido: string;
+  carrera: string;
+  area: AreaType;
+  celular: string;
+  dni: string;
+  email: string;
+  username: string;
+  password: string;
+}
+
+export const CARRERAS = [
+  'Ingeniería Civil',
+  'Ingeniería de Sistemas',
+  'Ingeniería Industrial',
+  'Ingeniería Electrónica',
+  'Ingeniería Mecánica',
+  'Ingeniería Química',
+  'Ingeniería Ambiental',
+  'Ingeniería de Minas',
+  'Ingeniería Agrónoma',
+  'Arquitectura',
+  'Medicina Humana',
+  'Enfermería',
+  'Odontología',
+  'Farmacia y Bioquímica',
+  'Nutrición',
+  'Psicología',
+  'Derecho',
+  'Ciencias de la Comunicación',
+  'Educación',
+  'Administración',
+  'Contabilidad',
+  'Economía',
+  'Marketing',
+  'Negocios Internacionales',
+  'Otra'
+];
+
+// ============================================
 // PREGUNTAS
 // ============================================
 
@@ -109,6 +171,9 @@ export interface SimulacroResult {
 export interface AppStore {
   student: Student | null;
   setStudent: (student: Student) => void;
+  
+  currentUser: User | null;
+  setCurrentUser: (user: User | null) => void;
   
   selectedArea: AreaType | null;
   setSelectedArea: (area: AreaType | null) => void;

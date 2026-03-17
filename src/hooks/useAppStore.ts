@@ -1,9 +1,12 @@
 import { create } from 'zustand';
-import type { AppStore, Student, Question, ExamMode, QuizizzResult, SimulacroResult, ExamStatus } from '../types';
+import type { AppStore, Student, Question, ExamMode, QuizizzResult, SimulacroResult, ExamStatus, User } from '../types';
 
 export const useAppStore = create<AppStore>((set, get) => ({
   student: null,
   setStudent: (student: Student) => set({ student }),
+  
+  currentUser: null,
+  setCurrentUser: (user: User | null) => set({ currentUser: user }),
   
   selectedArea: null,
   setSelectedArea: (area) => set({ selectedArea: area }),
@@ -41,6 +44,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   
   reset: () => set({
     student: null,
+    currentUser: null,
     selectedArea: null,
     selectedCourse: null,
     questions: [],

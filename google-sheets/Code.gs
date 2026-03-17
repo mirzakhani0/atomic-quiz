@@ -1,7 +1,120 @@
-function doGet() {
+function doGet(e) {
+  var action = e.parameter.action;
+  
+  if (action === 'login') {
+    return handleLogin(e);
+  }
+  if (action === 'getAlumnos') {
+    return handleGetAlumnos();
+  }
+  if (action === 'getUsuarios') {
+    return handleGetUsuarios();
+  }
+  if (action === 'registrarAlumnoConUsuario') {
+    return handleRegistrarAlumno(e);
+  }
+  if (action === 'createUser') {
+    return handleCreateUser(e);
+  }
+  if (action === 'deleteUsuario') {
+    return handleDeleteUsuario(e);
+  }
+  
   return HtmlService.createHtmlOutputFromFile('Index')
     .setTitle('Atomic Quiz API')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function doPost(e) {
+  var action = e.parameter.action;
+  
+  if (action === 'registrarAlumnoConUsuario') {
+    var data = {
+      nombre: e.parameter.nombre,
+      apellido: e.parameter.apellido,
+      carrera: e.parameter.carrera,
+      area: e.parameter.area,
+      celular: e.parameter.celular,
+      dni: e.parameter.dni,
+      email: e.parameter.email,
+      username: e.parameter.username,
+      password: e.parameter.password
+    };
+    var result = registrarAlumnoConUsuario(data);
+    return ContentService.createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  if (action === 'createUser') {
+    var data = {
+      username: e.parameter.username,
+      password: e.parameter.password,
+      role: e.parameter.role,
+      nombre: e.parameter.nombre
+    };
+    var result = createUser(data);
+    return ContentService.createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({ success: false, message: 'Acción no reconocida' }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function handleLogin(e) {
+  var username = e.parameter.username;
+  var password = e.parameter.password;
+  var result = login(username, password);
+  return ContentService.createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function handleGetAlumnos() {
+  var result = getAlumnos();
+  return ContentService.createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function handleGetUsuarios() {
+  var result = getUsuarios();
+  return ContentService.createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function handleRegistrarAlumno(e) {
+  var data = {
+    nombre: e.parameter.nombre,
+    apellido: e.parameter.apellido,
+    carrera: e.parameter.carrera,
+    area: e.parameter.area,
+    celular: e.parameter.celular,
+    dni: e.parameter.dni,
+    email: e.parameter.email,
+    username: e.parameter.username,
+    password: e.parameter.password
+  };
+  var result = registrarAlumnoConUsuario(data);
+  return ContentService.createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function handleCreateUser(e) {
+  var data = {
+    username: e.parameter.username,
+    password: e.parameter.password,
+    role: e.parameter.role,
+    nombre: e.parameter.nombre
+  };
+  var result = createUser(data);
+  return ContentService.createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function handleDeleteUsuario(e) {
+  var username = e.parameter.username;
+  var result = deleteUsuario(username);
+  return ContentService.createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 function getSheet(sheetName) {

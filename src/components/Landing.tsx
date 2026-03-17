@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Brain, Target, BookOpen, Settings, Cpu, Heart, Users, Sparkles } from 'lucide-react';
+import { Brain, Target, BookOpen, Settings, Cpu, Heart, Users, Sparkles, UserPlus, LogIn } from 'lucide-react';
 import { AREA_INFO, AREAS } from '../types';
 
 export function Landing() {
@@ -40,6 +40,25 @@ export function Landing() {
           <p className="text-lg text-slate-400 mb-8">
             Dos modos de práctica para tu preparación: Quizizz para memorizar y Simulacro para evaluar tu nivel real
           </p>
+
+          {/* Auth Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+            <button
+              onClick={() => navigate('/login')}
+              className="flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-cyan-600 to-cyan-700 rounded-xl font-bold text-white hover:from-cyan-500 hover:to-cyan-600 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-cyan-500/20"
+            >
+              <LogIn className="w-5 h-5" />
+              Soy alumno
+            </button>
+
+            <button
+              onClick={() => navigate('/register')}
+              className="flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-violet-600 to-violet-700 rounded-xl font-bold text-white hover:from-violet-500 hover:to-violet-600 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-violet-500/20"
+            >
+              <UserPlus className="w-5 h-5" />
+              Soy nuevo
+            </button>
+          </div>
 
           {/* Mode Cards */}
           <div className="grid md:grid-cols-2 gap-4 max-w-2xl mx-auto mb-12">

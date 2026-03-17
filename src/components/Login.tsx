@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Lock, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
 
 export function Login() {
   const navigate = useNavigate();
@@ -17,12 +17,16 @@ export function Login() {
     setError('');
     setLoading(true);
     
-    await new Promise(resolve => setTimeout(resolve, 500));
+    const result = await login(username, password);
     
-    if (login(username, password)) {
-      navigate('/admin');
+    if (result.success) {
+      if (username.toLowerCase() === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
     } else {
-      setError('Usuario o contraseña incorrectos');
+      setError(result.message || 'Usuario o contraseña incorrectos');
     }
     setLoading(false);
   };
@@ -35,7 +39,7 @@ export function Login() {
             <Lock className="w-8 h-8 text-cyan-400" />
           </div>
           <h1 className="text-2xl font-bold text-white">ATOMIC QUIZ</h1>
-          <p className="text-slate-400">Acceso administrativo</p>
+          <p className="text-slate-400">Ingresa a tu cuenta</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -46,7 +50,7 @@ export function Login() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl text-white"
-              placeholder="admin"
+              placeholder="Tu usuario"
             />
           </div>
 
@@ -58,7 +62,7 @@ export function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl text-white pr-12"
-                placeholder="••••••••••••"
+                placeholder="••••••••"
               />
               <button
                 type="button"
@@ -80,13 +84,26 @@ export function Login() {
           <button
             type="submit"
             disabled={loading || !username || !password}
-            className="w-full py-3 bg-cyan-600 rounded-xl font-bold hover:bg-cyan-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3 bg-cyan-600 rounded-xl font-bold hover:bg-cyan-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            {loading ? 'Verificando...' : 'Iniciar sesión'}
+            {loading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Verificando...
+              </>
+            ) : (
+              'Iniciar sesión'
+            )}
           </button>
         </form>
 
-        <div className="mt-6 text-center">
+        <div className="mt-6 text-center space-y-2">
+          <p className="text-slate-400 text-sm">
+            ¿No tienes cuenta?{' '}
+            <Link to="/register" className="text-cyan-400 hover:underline">
+              Regístrate aquí
+            </Link>
+          </p>
           <button
             onClick={() => navigate('/')}
             className="text-slate-400 hover:text-white text-sm"
