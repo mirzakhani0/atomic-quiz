@@ -1,4 +1,4 @@
-# SimulaUNA - Plataforma de Simulacros de Examen de Admisión
+# ATOMIC QUIZ - Plataforma de Simulacros de Examen de Admisión
 
 Plataforma web para realizar simulacros del examen de admisión de la **Universidad Nacional del Altiplano (UNA) Puno, Perú**. Permite a los estudiantes practicar con preguntas reales organizadas por área académica y recibir retroalimentación detallada de su desempeño.
 
@@ -140,7 +140,7 @@ Plataforma web para realizar simulacros del examen de admisión de la **Universi
 ## Estructura del Proyecto
 
 ```
-simulauna/
+ATOMIC QUIZ/
 ├── src/
 │   ├── components/           # Componentes React
 │   │   ├── Landing.tsx       # Página de inicio con features
@@ -957,7 +957,7 @@ El número de contacto para soporte y confirmación de usuarios es:
 
 **+51 900 266 810**
 
-Link directo: `https://wa.me/51900266810?text=Hola,%20quiero%20inscribirme%20en%20SimulaUNA`
+Link directo: `https://wa.me/51900266810?text=Hola,%20quiero%20inscribirme%20en%20ATOMIC%20QUIZ`
 
 ---
 
@@ -1084,6 +1084,6 @@ El formateo se aplica automáticamente en:
 
 Desarrollado para la **Universidad Nacional del Altiplano - Puno, Perú**
 
-Plataforma: SimulaUNA v1.4.0
+Plataforma: ATOMIC QUIZ v1.4.0
 
 Preguntas reales de exámenes de admisión desde 1993 hasta el último proceso.

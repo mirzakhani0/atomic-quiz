@@ -277,7 +277,7 @@ const CEPRE_SUBJECT_SHEETS = {
 ### Landing Page (Actualizada)
 ```
 ┌───────────────────────────────────────────────────────────────────────────────┐
-│                              SimulaUNA                                        │
+│                             ATOMIC QUIZ                                       │
 │                                                                               │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  ┌──────────┐ │
 │  │   Simulacro     │  │   Simulacro     │  │    Banqueo      │  │  Banqueo │ │
@@ -807,4 +807,4 @@ SOCIALES (SOC) usa estas hojas:
 ---
 
 *Documento creado: Diciembre 2024*
-*SimulaUNA v1.3.0 → v1.4.0*
+*ATOMIC QUIZ v1.3.0 → v1.4.0*

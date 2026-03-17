@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, UserPlus, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import { AREAS, CARRERAS, AreaType } from '../types';
 
-const APPSCRIPT_URL = 'https://script.google.com/macros/s/AKfycbykSmkmmOjui8KYyiGDHERpYzMhZ75o6UcIzA0EYJ3ZN1sNISmowKXlq_uADg0tGXZU/exec';
+const APPSCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxId-Jp2w8lzmmzACbCidS9w8MAUIrDPjmSRKGxHJk577wkECLXvvCXb90lJdAitFV1/exec';
 
 export function Register() {
   const navigate = useNavigate();
@@ -42,6 +42,16 @@ export function Register() {
       return;
     }
 
+    if (formData.dni.length !== 8 || !/^\d+$/.test(formData.dni)) {
+      setError('El DNI debe tener exactamente 8 números');
+      return;
+    }
+
+    if (formData.celular.length !== 9 || !/^\d+$/.test(formData.celular)) {
+      setError('El celular debe tener exactamente 9 números');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -54,7 +64,7 @@ export function Register() {
       try {
         result = JSON.parse(text);
       } catch {
-        setError('Error de conexión. Intenta de nuevo.');
+        setError('Error de conexión. Verifica la publicación del Apps Script.');
         setIsLoading(false);
         return;
       }
@@ -65,7 +75,7 @@ export function Register() {
           navigate('/login');
         }, 2000);
       } else {
-        setError(result.message || 'Error al registrar');
+        setError(result.message || 'Error al registrar el estudiante');
       }
     } catch (err) {
       setError('Error de conexión. Intenta de nuevo.');

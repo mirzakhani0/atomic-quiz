@@ -18,9 +18,9 @@ interface SheetQuestion {
 }
 
 const APPSCRIPT_URLS: Record<AreaType, string> = {
-  'Ingenierías': 'https://script.google.com/macros/s/AKfycbyNAnb4uLxcxFiwNZ3Hmi_VIbQlornTFY1SA73zC3uQ1Tu9lwMe2VJZS9HzLLYQojSJyg/exec',
-  'Biomédicas': 'https://script.google.com/macros/s/AKfycbzFyqDV6YyDq50OopTA26nZF67rLcLRSk1h9GRp5SOfrDnpLo0RV-oVXV7z6PUAaWQVXg/exec',
-  'Sociales': 'https://script.google.com/macros/s/AKfycbwUvvElR49vTGWx0c762zFnJTkqtGXkhAQjBGb9lFTP02dmqCTsebadSJAXc6V9zFXcHQ/exec'
+  'Ingenierías': 'https://script.google.com/macros/s/AKfycbxId-Jp2w8lzmmzACbCidS9w8MAUIrDPjmSRKGxHJk577wkECLXvvCXb90lJdAitFV1/exec',
+  'Biomédicas': 'https://script.google.com/macros/s/AKfycbxId-Jp2w8lzmmzACbCidS9w8MAUIrDPjmSRKGxHJk577wkECLXvvCXb90lJdAitFV1/exec',
+  'Sociales': 'https://script.google.com/macros/s/AKfycbxId-Jp2w8lzmmzACbCidS9w8MAUIrDPjmSRKGxHJk577wkECLXvvCXb90lJdAitFV1/exec'
 };
 
 const SEMANAS = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10', 'S11', 'S12', 'S13', 'S14', 'S15', 'S16'];
