@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AREAS, COURSES_BY_AREA, AreaType } from '../types';
-import { ArrowLeft, Upload, FileText, Plus, Trash2, Save, Database, LogOut, CheckCircle, XCircle, Loader2, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Upload, FileText, Database, LogOut, CheckCircle, XCircle, Loader2, RefreshCw, UploadCloud } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useQuestionsStore } from '../hooks/useQuestions';
 import clsx from 'clsx';
@@ -10,15 +10,9 @@ interface ImportedQuestion {
   questionText: string;
   options: string[];
   correctAnswer: number;
-  justification: string;
+  justification: string | undefined;
   course: string;
 }
-
-const APPSCRIPT_URLS: Record<AreaType, string> = {
-  'Ingenierías': 'https://script.google.com/macros/s/AKfycbw-MZvuiU4Z9ySewOSDjyq81pR_NjrcTVq3szEZU1DWDjKyPFG6IvdS5nlzE1ACZz-mMw/exec',
-  'Biomédicas': 'https://script.google.com/macros/s/AKfycbxqr1z3gQNHR9TxPCYX_nHAVR1TMvI1veNdt5L1BpaXkULpdddI_K80LSCauzkkjz7--g/exec',
-  'Sociales': 'https://script.google.com/macros/s/AKfycbwP-r3D0vvWJ_2Zx_KDyt_sWNBA-Ixs9Yemjhq6XAso454THHVNYqkZpQIty8C2yKZpzg/exec'
-};
 
 const SEMANAS = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10', 'S11', 'S12', 'S13', 'S14', 'S15', 'S16'];
 
@@ -32,56 +26,72 @@ export function Admin() {
   const [course, setCourse] = useState('');
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ success: boolean; message: string; count?: number } | null>(null);
+  const [jsonInput, setJsonInput] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const fetchFromGoogleSheets = async (appsScriptUrl: string, semana: string): Promise<ImportedQuestion[]> => {
-    const url = `${appsScriptUrl}?sheet=${semana}`;
-    
-    const response = await fetch(url, {
-      redirect: 'follow',
-      credentials: 'include'
-    });
-    
-    const text = await response.text();
-    
+  const parseJSON = (text: string): ImportedQuestion[] => {
     try {
-      const json = JSON.parse(text);
+      const data = JSON.parse(text);
+      const arr = Array.isArray(data) ? data : data.data || [];
       
-      if (json.error) {
-        throw new Error(json.error);
-      }
-      
-      const data = json.data || [];
-      return data.map((row: Record<string, string>) => {
-        const respuesta = (row.respuesta || '').toString().toUpperCase().trim();
+      return arr.map((row: Record<string, unknown>) => {
+        const respuesta = String(row.respuesta || row.respuesta_correcta || '').toUpperCase().trim();
         const respuestaIndex = respuesta.charCodeAt(0) - 65;
         
         return {
-          questionText: row.pregunta || '',
+          questionText: String(row.pregunta || row.questionText || ''),
           options: [
-            row.opcion_a || '',
-            row.opcion_b || '',
-            row.opcion_c || '',
-            row.opcion_d || '',
-            row.opcion_e || ''
+            String(row.opcion_a || row.option_a || ''),
+            String(row.opcion_b || row.option_b || ''),
+            String(row.opcion_c || row.option_c || ''),
+            String(row.opcion_d || row.option_d || ''),
+            String(row.opcion_e || row.option_e || '')
           ],
           correctAnswer: respuestaIndex >= 0 && respuestaIndex < 5 ? respuestaIndex : 0,
-          justification: row.justificacion || '',
-          course: row.curso || ''
+          justification: String(row.justificacion || row.explicacion || ''),
+          course: String(row.curso || row.course || '')
         };
-      });
+      }).filter((q: ImportedQuestion) => q.questionText);
     } catch (e) {
-      throw new Error('Error al parsear la respuesta. Verifica que el Apps Script esté desplegado como "Anyone with Google Account" o público.');
+      throw new Error('JSON inválido');
     }
   };
 
-  const handleImport = async () => {
-    if (!area || !semana) return;
+  const parseCSV = (text: string): ImportedQuestion[] => {
+    const lines = text.trim().split('\n');
+    if (lines.length < 2) return [];
+
+    const result: ImportedQuestion[] = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+
+      const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+      if (cols.length < 9) continue;
+
+      const respuesta = cols[6]?.toUpperCase().trim() || '';
+      const respuestaIndex = respuesta.charCodeAt(0) - 65;
+
+      result.push({
+        questionText: cols[0] || '',
+        options: [cols[1] || '', cols[2] || '', cols[3] || '', cols[4] || '', cols[5] || ''],
+        correctAnswer: respuestaIndex >= 0 && respuestaIndex < 5 ? respuestaIndex : 0,
+        justification: cols[7] || '',
+        course: cols[8] || ''
+      });
+    }
+
+    return result;
+  };
+
+  const handleImportJSON = async () => {
+    if (!jsonInput.trim()) return;
     setImporting(true);
     setImportResult(null);
 
     try {
-      const appsScriptUrl = APPSCRIPT_URLS[area];
-      const importedQuestions = await fetchFromGoogleSheets(appsScriptUrl, semana);
+      const importedQuestions = parseJSON(jsonInput);
       
       const filteredQuestions = course 
         ? importedQuestions.filter(q => q.course.toLowerCase() === course.toLowerCase())
@@ -102,17 +112,68 @@ export function Admin() {
       
       setImportResult({
         success: true,
-        message: `Se importaron ${questionsWithMeta.length} preguntas de ${semana} para ${area}`,
+        message: `Se importaron ${questionsWithMeta.length} preguntas desde JSON`,
         count: questionsWithMeta.length
       });
+      setJsonInput('');
     } catch (error) {
       setImportResult({
         success: false,
-        message: 'Error al importar. Verifica que el Apps Script esté desplegado correctamente.'
+        message: 'Error al parsear JSON. Verifica el formato.'
       });
     } finally {
       setImporting(false);
     }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    setImportResult(null);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const importedQuestions = file.name.endsWith('.json') 
+          ? parseJSON(text) 
+          : parseCSV(text);
+
+        const filteredQuestions = course 
+          ? importedQuestions.filter(q => q.course.toLowerCase() === course.toLowerCase())
+          : importedQuestions;
+
+        const questionsWithMeta = filteredQuestions.map((q, idx) => ({
+          id: `${area}-${semana}-${q.course}-${idx}-${Date.now()}`,
+          number: idx + 1,
+          questionText: q.questionText,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+          course: q.course,
+          area: area,
+          justification: q.justification || undefined
+        }));
+
+        addQuestions(questionsWithMeta);
+        
+        setImportResult({
+          success: true,
+          message: `Se importaron ${questionsWithMeta.length} preguntas desde ${file.name}`,
+          count: questionsWithMeta.length
+        });
+      } catch (error) {
+        setImportResult({
+          success: false,
+          message: 'Error al leer el archivo. Formato no válido.'
+        });
+      } finally {
+        setImporting(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+    reader.readAsText(file);
   };
 
   return (
@@ -141,19 +202,19 @@ export function Admin() {
           </div>
           <div>
             <h1 className="text-2xl font-bold">Panel de Administración</h1>
-            <p className="text-slate-400">Importa preguntas desde Google Sheets</p>
+            <p className="text-slate-400">Importa preguntas desde archivo o JSON</p>
           </div>
         </div>
 
         <div className="bg-slate-800 rounded-2xl p-6 mb-6">
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Upload className="w-5 h-5 text-cyan-400" />
-            Importar desde Google Sheets
+            <UploadCloud className="w-5 h-5 text-cyan-400" />
+            Importar Preguntas
           </h2>
 
-          <div className="grid md:grid-cols-3 gap-4 mb-4">
+          <div className="grid md:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-sm text-slate-400 mb-2">Área</label>
+              <label className="block text-sm text-slate-400 mb-2">Área destino</label>
               <select
                 value={area}
                 onChange={(e) => { setArea(e.target.value as AreaType); setCourse(''); }}
@@ -177,25 +238,34 @@ export function Admin() {
                 ))}
               </select>
             </div>
+          </div>
 
-            <div>
-              <label className="block text-sm text-slate-400 mb-2">Curso (opcional)</label>
-              <select
-                value={course}
-                onChange={(e) => setCourse(e.target.value)}
-                className="w-full p-3 bg-slate-700 border border-slate-600 rounded-xl"
-              >
-                <option value="">Todos los cursos</option>
-                {COURSES_BY_AREA[area].map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
+          <div className="mb-4">
+            <label className="block text-sm text-slate-400 mb-2">Subir archivo (CSV o JSON)</label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,.json"
+              onChange={handleFileUpload}
+              className="w-full p-3 bg-slate-700 border border-slate-600 rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-cyan-600 file:text-white file:cursor-pointer"
+            />
+          </div>
+
+          <div className="text-center text-slate-400 py-2">o</div>
+
+          <div className="mb-4">
+            <label className="block text-sm text-slate-400 mb-2">Pegar JSON directamente</label>
+            <textarea
+              value={jsonInput}
+              onChange={(e) => setJsonInput(e.target.value)}
+              placeholder='[{"pregunta": "...", "opcion_a": "...", "opcion_b": "...", "opcion_c": "...", "opcion_d": "...", "opcion_e": "...", "respuesta": "A", "justificacion": "...", "curso": "Aritmética"}]'
+              className="w-full p-3 bg-slate-700 border border-slate-600 rounded-xl text-sm font-mono h-32"
+            />
           </div>
 
           <button
-            onClick={handleImport}
-            disabled={!area || !semana || importing}
+            onClick={handleImportJSON}
+            disabled={!jsonInput.trim() || importing}
             className="w-full py-3 bg-cyan-600 rounded-xl font-medium hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {importing ? (
@@ -206,7 +276,7 @@ export function Admin() {
             ) : (
               <>
                 <Upload className="w-5 h-5" />
-                Importar de {area} - {semana}
+                Importar desde JSON
               </>
             )}
           </button>
@@ -220,6 +290,25 @@ export function Admin() {
               <span>{importResult.message}</span>
             </div>
           )}
+        </div>
+
+        <div className="bg-slate-800 rounded-2xl p-6 mb-6">
+          <h3 className="text-md font-semibold mb-3">Formato esperado (JSON):</h3>
+          <pre className="text-xs bg-slate-700 p-3 rounded-lg overflow-x-auto text-slate-300">
+{`[
+  {
+    "pregunta": "¿Cuánto es 15 + 27?",
+    "opcion_a": "40",
+    "opcion_b": "42",
+    "opcion_c": "44",
+    "opcion_d": "46",
+    "opcion_e": "48",
+    "respuesta": "B",
+    "justificacion": "15 + 27 = 42",
+    "curso": "Aritmética"
+  }
+]`}
+          </pre>
         </div>
 
         <div className="bg-slate-800 rounded-2xl p-6">
