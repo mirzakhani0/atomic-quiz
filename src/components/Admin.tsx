@@ -35,32 +35,43 @@ export function Admin() {
 
   const fetchFromGoogleSheets = async (appsScriptUrl: string, semana: string): Promise<ImportedQuestion[]> => {
     const url = `${appsScriptUrl}?sheet=${semana}`;
-    const response = await fetch(url);
-    const json = await response.json();
     
-    if (json.error) {
-      throw new Error(json.error);
-    }
-    
-    const data = json.data || [];
-    return data.map((row: Record<string, string>) => {
-      const respuesta = (row.respuesta || '').toString().toUpperCase().trim();
-      const respuestaIndex = respuesta.charCodeAt(0) - 65;
-      
-      return {
-        questionText: row.pregunta || '',
-        options: [
-          row.opcion_a || '',
-          row.opcion_b || '',
-          row.opcion_c || '',
-          row.opcion_d || '',
-          row.opcion_e || ''
-        ],
-        correctAnswer: respuestaIndex >= 0 && respuestaIndex < 5 ? respuestaIndex : 0,
-        justification: row.justificacion || '',
-        course: row.curso || ''
-      };
+    const response = await fetch(url, {
+      redirect: 'follow',
+      credentials: 'include'
     });
+    
+    const text = await response.text();
+    
+    try {
+      const json = JSON.parse(text);
+      
+      if (json.error) {
+        throw new Error(json.error);
+      }
+      
+      const data = json.data || [];
+      return data.map((row: Record<string, string>) => {
+        const respuesta = (row.respuesta || '').toString().toUpperCase().trim();
+        const respuestaIndex = respuesta.charCodeAt(0) - 65;
+        
+        return {
+          questionText: row.pregunta || '',
+          options: [
+            row.opcion_a || '',
+            row.opcion_b || '',
+            row.opcion_c || '',
+            row.opcion_d || '',
+            row.opcion_e || ''
+          ],
+          correctAnswer: respuestaIndex >= 0 && respuestaIndex < 5 ? respuestaIndex : 0,
+          justification: row.justificacion || '',
+          course: row.curso || ''
+        };
+      });
+    } catch (e) {
+      throw new Error('Error al parsear la respuesta. Verifica que el Apps Script esté desplegado como "Anyone with Google Account" o público.');
+    }
   };
 
   const handleImport = async () => {
