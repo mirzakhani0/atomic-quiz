@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Brain, Target, BookOpen, LogOut, User, Sparkles, TrendingUp, History, Calendar, Award, Loader2 } from 'lucide-react';
+import { Brain, Target, BookOpen, LogOut, User, Sparkles, TrendingUp, History, Calendar, Award, Loader2, Zap } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 const APPSCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxNDLhK6_BaxCtOO_sXrvfare0f4If3JLruSswte2f4ujoeKSQUmxnoXjIJUBQoWA6c/exec';

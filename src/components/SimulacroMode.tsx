@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import { useAppStore, useCurrentQuestion, useProgress, useIsLastQuestion, useIsFirstQuestion, useSavedAnswer } from '../hooks/useAppStore';
 import { AREAS, AreaType } from '../types';
 import { ArrowLeft, ArrowRight, Clock, Grid3X3, X, RotateCcw } from 'lucide-react';
@@ -26,6 +27,7 @@ const APPSCRIPT_URLS: Record<AreaType, string> = {
 const SEMANAS = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10', 'S11', 'S12', 'S13', 'S14', 'S15', 'S16'];
 
 export function SimulacroMode() {
+  const { currentUser } = useAuth();
   const navigate = useNavigate();
   const {
     selectedArea, setSelectedArea,
